@@ -48,10 +48,21 @@ htmlcov/
 .pytest_cache/
 .coverage.*
 
-# Project specific (customize as needed)
-# Uncomment the following line if you don't want to track database files
+# Project specific
+src/Logs/
+instance/sessions/
+*.pid
+*.processed
+
+# Credentials and sensitive data
+src/Credentials/active_account.json
+src/Credentials/env.sh
+src/Credentials/env.sh.BAK
+
+# Database files - keeping them for now, but you might want to exclude them later
 # *.db
 
 # Local configuration
 config.local.json
 *.local.ini
+local_settings.py
