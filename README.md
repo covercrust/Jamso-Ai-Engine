@@ -14,8 +14,9 @@ A robust server implementation for Jamso AI Bot, providing webhook functionality
 
 This project is configured to use GitHub for version control. To set up the GitHub repository:
 
-1. Follow the instructions in [GitHub Setup Guide](Docs/GitHub_Setup_Guide.md), or
-2. Use our automated tool:
+1. Follow the instructions in [GitHub Setup Guide](Docs/GitHub_Setup_Guide.md)
+2. For authentication help, see [GitHub Authentication Guide](Docs/GitHub_Authentication_Guide.md)
+3. Or use our automated tool:
 
    ```bash
    python Tools/create_github_repo.py
