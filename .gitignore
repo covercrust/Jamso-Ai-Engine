@@ -58,6 +58,15 @@ instance/sessions/
 src/Credentials/active_account.json
 src/Credentials/env.sh
 src/Credentials/env.sh.BAK
+**/env.sh*
+**/*.key
+**/*.pem
+**/*.env
+**/*_key
+**/*_token
+**/*_secret
+**/*password*
+**/*credential*
 
 # Database files - keeping them for now, but you might want to exclude them later
 # *.db
