@@ -10,6 +10,19 @@ A robust server implementation for Jamso AI Bot, providing webhook functionality
 - Python 3.8+ (Python 3.13 recommended)
 - pip package manager
 
+## GitHub Repository Setup
+
+This project is configured to use GitHub for version control. To set up the GitHub repository:
+
+1. Follow the instructions in [GitHub Setup Guide](Docs/GitHub_Setup_Guide.md), or
+2. Use our automated tool:
+
+   ```bash
+   python Tools/create_github_repo.py
+   ```
+
+   This will create a new GitHub repository and push your local code to it.
+
 ## Installation
 
 ### Automatic Setup (Recommended)
