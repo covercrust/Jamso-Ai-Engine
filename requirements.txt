@@ -1,0 +1,103 @@
+# Merged requirements file for Jamso AI Bot
+# Last updated: May 11, 2025
+# Merged from:
+#  - requirements.txt
+#  - requirements_no_gevent.txt
+#  - proxy_requirements.txt
+
+# Core web framework
+flask==3.0.3  # Web framework
+flask-login==0.6.3  # Latest available version as of May 2025
+flask-cors==4.0.1  # CORS support for Flask
+Werkzeug==3.0.3  # WSGI utility library for Flask
+Flask-Session==0.5.0  # For server-side session support in Flask dashboard
+Flask-WTF==1.2.1  # CSRF protection for Flask forms
+
+# HTTP and API clients
+requests==2.32.2  # HTTP requests (from main requirements, supersedes proxy_requirements)
+httpx==0.28.1  # Async HTTP client
+anyio==4.3.0  # Async library
+
+# WebSocket support
+websocket-client==1.8.0  # WebSocket client
+websocket==0.2.1  # WebSocket library
+
+# Security and cryptography
+cryptography==42.0.5  # Cryptographic recipes and primitives
+pycryptodome==3.20.0  # Cryptographic library
+
+# Environment and configuration
+python-dotenv==1.0.1  # Environment variable management
+pyyaml==6.0.2  # YAML parser and emitter
+
+# Terminal and console support
+colorama==0.4.6  # Cross-platform colored terminal text
+termcolor==2.4.0  # Colored terminal text output
+
+# Data validation and parsing
+pydantic==2.7.1  # Data validation and settings management
+pydantic_core==2.18.2  # Core for Pydantic
+jsonschema==4.22.0  # JSON Schema validation
+
+# Logging and monitoring
+watchdog==4.0.0  # File system monitoring
+tqdm==4.66.2  # Progress bar utility
+blinker==1.8.2  # Signal library
+python-json-logger==2.0.7  # Structured logging for Python
+colorlog==6.8.2  # For colored logging in the console
+
+# OpenAI integration
+openai==1.30.5  # OpenAI API client
+
+# Template rendering
+Jinja2==3.1.4  # Templating engine
+MarkupSafe==2.1.5  # Compatible with Python 3.12+
+
+# Database
+SQLAlchemy==2.0.30  # Database ORM
+psycopg2-binary==2.9.9  # PostgreSQL adapter
+redis==5.0.1  # Redis client for distributed rate limiting and caching
+
+# Async and concurrency
+sniffio==1.3.1  # Async context management
+h11==0.14.0  # HTTP/1.1 library
+gevent==24.2.1  # Coroutine-based networking (from main requirements, not in no_gevent)
+greenlet==3.0.3  # Lightweight coroutines (from main requirements, not in no_gevent)
+
+# Development and debugging
+backoff==2.2.1  # Retry library
+annotated-types==0.7.0  # Type annotations
+typing-extensions==4.11.0  # Additional typing hints
+
+# Optional dependencies for advanced features
+itsdangerous==2.2.0  # Secure data serialization
+cffi==1.16.0  # Foreign function interface
+pycparser==2.22  # C parser
+zope.event==5.0  # Event handling
+zope.interface==6.3  # Use latest stable, non-yanked version for Python 3.12+
+
+# Testing and debugging
+pytest==8.2.0  # Testing framework
+pytest-mock==3.14.0  # Mocking library for pytest
+pytest-asyncio==0.23.6  # Async support for pytest
+pytest-cov==5.0.0  # Coverage reporting for pytest
+
+# Linting and formatting
+flake8==7.0.0  # Linting tool
+black==24.4.2  # Code formatter
+isort==5.13.2  # Import sorter
+
+# Package management
+setuptools==69.2.0  # Package management
+urllib3==2.2.2  # HTTP library (from main requirements, supersedes proxy_requirements)
+idna==3.7  # Internationalized domain names
+charset-normalizer==3.4.0  # Charset detection
+click==8.1.7  # Command-line interface
+
+# System monitoring
+psutil==5.9.8  # Process and system monitoring
+
+# Server deployment
+gunicorn==21.2.0  # WSGI HTTP Server for production
+uwsgi==2.0.23  # WSGI server for production deployment
+supervisor==4.2.5  # Process control system for production

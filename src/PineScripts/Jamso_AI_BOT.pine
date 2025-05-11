@@ -1,0 +1,826 @@
+//@version=5
+strategy("Jamso Enhanced Alert SuperTrend", overlay=true, max_labels_count=500, initial_capital=5000, pyramiding=3, calc_on_every_tick=false)
+import TradingView/ta/7
+
+// === 1. Inputs ===
+
+// ----- Date Range Inputs -----
+group_daterange = 'Date Range'
+Start_Y = input.int(title='Start Year', defval=2025, group=group_daterange)
+Start_M = input.int(title='Start Month', defval=1, minval=1, maxval=12, group=group_daterange)
+Start_D = input.int(title='Start Day', defval=1, minval=1, maxval=31, group=group_daterange)
+End_Y = input.int(title='End Year', defval=2025, group=group_daterange)
+End_M = input.int(title='End Month', defval=12, minval=1, maxval=12, group=group_daterange)
+End_D = input.int(title='End Day', defval=31, minval=1, maxval=31, group=group_daterange)
+use_date_filter = input.bool(title="Enable Date Filter", defval=true, group=group_daterange, tooltip="Enable/disable date range filtering")
+
+// ----- Appearance Inputs -----
+group_appearance = "Appearance"
+t1 = input.int(70, "Transparency 1", maxval=100, minval=0, group=group_appearance)
+t2 = input.int(85, "Transparency 2", maxval=100, minval=0, group=group_appearance)
+green = input.color(color.new(color.rgb(0, 255, 187), 0), "Bullish Color", group=group_appearance)
+red = input.color(color.new(color.rgb(255, 17, 0), 0), "Bearish Color", group=group_appearance)
+
+// ----- Miscellaneous Inputs -----
+group_misc = 'Miscellaneous'
+Enable_Debugging = input.bool(title='Enable Debugging?', defval=false, group=group_misc)
+Enable_Hedging = input.bool(title='Enable Hedging?', defval=false, group=group_misc)
+
+// ----- SuperTrend Settings -----
+group_supertrend = "SuperTrend Settings"
+atr_len = input.int(10, "ATR Length", group=group_supertrend, minval=1, maxval=50)
+fact = input.float(2.8, "SuperTrend Factor", group=group_supertrend, minval=1.0, maxval=10.0, step=0.1)
+optimize_factor = input.bool(true, "Optimize SuperTrend Factor", group=group_supertrend, tooltip="Adjust factor dynamically based on market conditions")
+
+// ----- Clustering Inputs -----
+group_clustering = "K-Means Settings"
+training_data_period = input.int(100, "Training Data Length", group=group_clustering)
+highvol = input.float(0.75, "Initial High Volatility Percentile Guess", maxval=1, group=group_clustering)
+midvol = input.float(0.5, "Initial Medium Volatility Percentile Guess", maxval=1, group=group_clustering)
+lowvol = input.float(0.25, "Initial Low Volatility Percentile Guess", maxval=1, group=group_clustering)
+
+// ----- Risk Management Inputs -----
+group_risk = "Risk Management"
+risk_percent = input.float(1.0, title="Risk % of Capital", group=group_risk, minval=0.1, maxval=10)
+max_risk_percent = input.float(5.0, title="Maximum Risk % (for adaptive risk)", group=group_risk, minval=0.1, maxval=10)
+adaptive_risk = input.bool(false, title="Use Adaptive Risk", group=group_risk, tooltip="Dynamically adjust risk based on performance")
+direction_bias = input.string("Both", title="Trading Direction Bias", options=["Both", "Long Only", "Short Only", "Short Bias"], group=group_risk)
+
+// Stop Loss Configuration - Enhanced with ATR option
+sl_type = input.string("Fixed Percent", "Stop Loss Type", options=["Fixed Percent", "ATR-Based"], group=group_risk, tooltip="Fixed percent or ATR-based stop loss")
+sl_percent = input.float(0.5, title="Stop Loss (%) - Fixed Mode", group=group_risk, minval=0.1, maxval=10)
+sl_atr_multiplier = input.float(2.0, title="Stop Loss ATR Multiplier", group=group_risk, minval=0.5, maxval=5, step=0.1, tooltip="Stop loss distance in ATR units")
+
+tp_percent = input.float(1.5, title="Take Profit (%)", group=group_risk, minval=0.1, maxval=10)
+max_contracts = input.int(title="Maximum Contracts Allowed", defval=28, minval=1, maxval=50, group=group_risk, tooltip="Limit the maximum number of contracts to control risk")
+sizing_method = input.string(title="Sizing Method", defval="Dynamic Risk-Based", options=["Dynamic Risk-Based", "Fixed Sizing"], group=group_risk)
+order_size = input.float(title="Fixed Order Size", defval=1.0, minval=0.001, group=group_risk)
+trailing_stop = input.bool(false, title="Use Trailing Stop", group=group_risk)
+trailing_step = input.float(0.2, title="Trailing Step (%)", group=group_risk, minval=0.1, maxval=5, tooltip="Distance to maintain from price when trailing")
+spread_pips = input.float(title='Spread in Pips', defval=0.0, minval=0.0, group=group_risk)
+use_deep_settings = input.bool(true, "Use Deep Backtest Settings", group=group_risk, tooltip="Use optimized settings from deep backtest")
+profit_protection = input.bool(true, "Enable Profit Protection", group=group_risk, tooltip="Adjust risk based on equity curve")
+
+// NEW: Additional risk control - maximum drawdown limit
+max_drawdown_limit = input.float(25.0, "Max Drawdown % Limit", minval=5.0, maxval=50.0, step=1.0, group=group_risk, tooltip="Stop trading when drawdown reaches this percentage")
+pause_trading_on_drawdown = input.bool(true, "Pause Trading on Max Drawdown", group=group_risk, tooltip="Automatically pause trading when drawdown limit is reached")
+
+// NEW: Appearance customization options
+group_custom_appearance = "Advanced Appearance"
+enable_custom_tables = input.bool(false, "Enable Custom Table Appearance", group=group_custom_appearance)
+table_transparency = input.int(20, "Table Background Transparency", minval=0, maxval=100, group=group_custom_appearance)
+compact_mode = input.bool(false, "Compact Table Mode", group=group_custom_appearance, tooltip="Use smaller tables with less information")
+performance_table_position = input.string("Bottom Left", "Performance Table Position", options=["Top Left", "Top Right", "Bottom Left", "Bottom Right"], group=group_custom_appearance)
+trades_table_position = input.string("Bottom Right", "Trades Table Position", options=["Top Left", "Top Right", "Bottom Left", "Bottom Right"], group=group_custom_appearance)
+atr_table_position = input.string("Top Right", "ATR Table Position", options=["Top Left", "Top Right", "Bottom Left", "Bottom Right"], group=group_custom_appearance)
+
+// NEW: Alert System Configuration
+group_alerts = "Alert Configuration"
+enable_trade_alerts = input.bool(true, "Enable Trade Alerts", group=group_alerts, tooltip="Enable alerts for trade entries and exits")
+enable_trend_alerts = input.bool(true, "Enable Trend Alerts", group=group_alerts, tooltip="Enable alerts for trend changes")
+enable_volatility_alerts = input.bool(false, "Enable Volatility Alerts", group=group_alerts, tooltip="Enable alerts for volatility regime changes")
+enable_debug_alerts = input.bool(false, "Enable Debug Alerts", group=group_alerts, tooltip="Enable additional debug information in alerts")
+
+// NEW: Table Display Configuration
+group_tables = "Table Display"
+enable_all_tables = input.bool(true, "Show Tables", group=group_tables, tooltip="Enable/disable all tables for smaller screens")
+enable_performance_table = input.bool(true, "Show Performance Table", group=group_tables)
+enable_trades_table = input.bool(true, "Show Trades Table", group=group_tables)
+enable_atr_table = input.bool(true, "Show ATR Table", group=group_tables)
+mini_table_mode = input.bool(false, "Memory-Efficient Table Mode", group=group_tables, tooltip="Simplified tables with less info for memory optimization")
+
+// === 2. Variable Declarations ===
+
+// Calculate ATR on each bar
+current_atr = ta.atr(atr_len)
+
+// Track trade execution
+var bool trade_executed = false
+var string order_action = na
+var float entry_price = na
+
+// ----- Leverage Mapping -----
+default_leverage = 20.0
+var string uuid_long = na
+var string uuid_short = na
+
+// Ensure UUID is unique per trade and resets after trade closure
+// Enhanced with randomness for better uniqueness
+generate_uuid(type) =>
+    random_component = str.tostring(math.round(math.random(1, 1000)))
+    type + "_" + str.tostring(time) + "_" + random_component
+
+if na(uuid_long) or (strategy.position_size == 0 and strategy.position_size[1] > 0)
+    uuid_long := generate_uuid("Long")
+if na(uuid_short) or (strategy.position_size == 0 and strategy.position_size[1] < 0)
+    uuid_short := generate_uuid("Short")
+
+get_dynamic_leverage(ticker_type) =>
+    switch ticker_type
+        'forex' => 200.0
+        'index' => 200.0
+        'commodity' => 200.0
+        'crypto' => 20.0
+        'stock' => 20.0
+        'futures' => 50.0
+        => default_leverage
+
+ticker_type = syminfo.type
+Leverage = get_dynamic_leverage(ticker_type)
+
+// ----- Volatility Calculation -----
+volatility = ta.atr(atr_len)
+
+// Declare atr_table
+var table atr_table = na
+
+// === 3. Functions ===
+
+// Debugging Helper Function
+debug_log(msg, color_code) =>
+    if Enable_Debugging
+        label.new(bar_index, high, msg, color=color_code, style=label.style_circle)
+    else
+        na  // Return na when not debugging to ensure consistent return type
+
+// ----- SuperTrend Function -----
+pine_supertrend(factor, atr_value) =>
+    src = hl2
+    upperBand = src + factor * atr_value
+    lowerBand = src - factor * atr_value
+    prevLowerBand = nz(lowerBand[1], lowerBand)
+    prevUpperBand = nz(upperBand[1], upperBand)
+
+    lowerBand := lowerBand > prevLowerBand or close[1] < prevLowerBand ? lowerBand : prevLowerBand
+    upperBand := upperBand < prevUpperBand or close[1] > prevUpperBand ? upperBand : prevUpperBand
+
+    int _direction = na  // Declared with type
+    float superTrend = na  // Declared with type
+    prevSuperTrend = nz(superTrend[1], src)
+
+    if na(prevSuperTrend)
+        _direction := 1
+    else if prevSuperTrend == prevUpperBand[1]
+        _direction := close > upperBand ? -1 : 1
+    else
+        _direction := close < lowerBand ? 1 : -1
+
+    superTrend := _direction == -1 ? lowerBand : upperBand
+    [superTrend, _direction]
+
+// Function to generate alert message with Ticker and Webhook Token
+generate_alert_message(order_id, action, market_price, sl_price, tp_price, position_size, regime) =>
+    // Basic message without trailing stop information
+    base_message = '{"order_id": "' + order_id + '", "ticker": "' + syminfo.ticker + '", "order_action": "' + action + '", "market_price": ' + str.tostring(market_price) + ', "stop_loss": ' + str.tostring(sl_price) + ', "take_profit": ' + str.tostring(tp_price) + ', "position_size": ' + str.tostring(position_size)
+    
+    // Add current price for more accurate execution
+    base_message := base_message + ', "price": ' + str.tostring(close)
+    
+    // Add spread information if available through request.security()
+    spread_estimate = (high - low) / close * 100  // Rough spread estimate based on current bar
+    base_message := base_message + ', "spread_estimate": ' + str.tostring(spread_estimate)
+    
+    // Add trailing stop information when enabled
+    if trailing_stop
+        trailing_offset = close * trailing_step / 100
+        base_message := base_message + ', "trailing_stop": true, "trailing_step_percent": ' + str.tostring(trailing_step) + ', "trailing_offset": ' + str.tostring(trailing_offset)
+    else
+        base_message := base_message + ', "trailing_stop": false'
+    
+    // Add hedging status to the webhook payload
+    base_message := base_message + ', "hedging_enabled": ' + (Enable_Hedging ? "true" : "false")
+    
+    // Add volatility regime info to help with execution
+    base_message := base_message + ', "volatility_regime": "' + regime + '"'
+    
+    // Add webhook token
+    base_message := base_message + ', "X-Webhook-Token": "6a87cf683ac94bc7f83bc09ba643dc578538d4eb46c931a60dc4fe3ec3c159cd"'
+    
+    // Add debug information if enabled
+    if enable_debug_alerts
+        base_message := base_message + ', "timeframe": "' + timeframe.period + '", "strategy_name": "Jamso AI BOT"'
+    
+    // Close the JSON object
+    base_message := base_message + '}'
+    
+    base_message
+
+// Function to send conditional alerts based on user configuration
+send_conditional_alert(message, alert_type) =>
+    should_send = switch alert_type
+        "trade" => enable_trade_alerts
+        "trend" => enable_trend_alerts
+        "volatility" => enable_volatility_alerts
+        => true // Default to true for other types
+    
+    if should_send
+        alert(message, alert.freq_once_per_bar_close)
+
+// Function to update ATR table cells with improved visibility
+update_atr_table(hv_val, mv_val, lv_val, hv_sz, mv_sz, lv_sz, cur_atr) =>
+    // Update Centroid (ATR) values with better visibility
+    table.cell(atr_table, 1, 1, not na(hv_val) ? str.format("{0,number,#.##}", hv_val) : "N/A", text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.red, 60))
+    table.cell(atr_table, 2, 1, not na(mv_val) ? str.format("{0,number,#.##}", mv_val) : "N/A", text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.orange, 60))
+    table.cell(atr_table, 3, 1, not na(lv_val) ? str.format("{0,number,#.##}", lv_val) : "N/A", text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.green, 60))
+
+    // Update Cluster Sizes with better visibility
+    table.cell(atr_table, 1, 2, str.tostring(hv_sz), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.red, 60))
+    table.cell(atr_table, 2, 2, str.tostring(mv_sz), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.orange, 60))
+    table.cell(atr_table, 3, 2, str.tostring(lv_sz), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.green, 60))
+
+    // Update Current ATR with better visibility
+    table.cell(atr_table, 1, 3, str.format("{0,number,#.##}", cur_atr), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.red, 60))
+    table.cell(atr_table, 2, 3, str.format("{0,number,#.##}", cur_atr), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.orange, 60))
+    table.cell(atr_table, 3, 3, str.format("{0,number,#.##}", cur_atr), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.green, 60))
+
+// Function to reset table background colors
+reset_table_background(table_name) =>
+    for row = 1 to 3
+        for col = 0 to 3
+            table.cell_set_bgcolor(table_name, row, col, na)
+
+// Function to highlight the active cluster row - KEEP ONLY THIS IMPROVED VERSION
+highlight_cluster_row(table_name, active_cluster) =>
+    reset_table_background(table_name)
+    cluster_row = active_cluster == 0 ? 1 : active_cluster == 1 ? 2 : 3
+    cluster_color = active_cluster == 0 ? color.new(color.red, 20) : active_cluster == 1 ? color.new(color.orange, 20) : color.new(color.green, 20)
+    for col = 0 to 3
+        table.cell_set_bgcolor(table_name, cluster_row, col, cluster_color)
+
+// Function to update SuperTrend parameters based on market regime
+adjust_supertrend_parameters(regime) =>
+    factor = switch regime
+        "volatile" => fact * 1.5
+        "medium" => fact * 1.2
+        "calm" => fact
+        => fact
+    [factor, atr_len]
+
+// NEW: Function to safely access table cells with error checking
+safe_table_update(table_id, column, row, value, text_color, bgcolor, text_size) =>
+    if not na(table_id) and row >= 0 and column >= 0
+        table.cell(table_id, column, row, value, text_color=text_color, bgcolor=bgcolor, text_halign=text.align_center, text_size=text_size)
+        na  // Return na to match the return type in the else branch
+    else if Enable_Debugging
+        label.new(bar_index, high, "Table Error: Failed to update cell [" + str.tostring(column) + "," + str.tostring(row) + "]", color=color.red)
+    else
+        na  // Ensure we always return something for consistency
+
+// NEW: Calculate additional performance metrics
+calculate_sharpe_ratio() =>
+    // Calculate daily returns
+    daily_returns = strategy.equity / strategy.equity[1] - 1
+    
+    // Find average daily return and standard deviation
+    avg_return = ta.sma(daily_returns, 252)  // Assuming ~252 trading days in a year
+    std_dev = ta.stdev(daily_returns, 252)
+    
+    // Sharpe ratio calculation (using 0% as risk-free rate for simplicity)
+    std_dev != 0 ? avg_return / std_dev * math.sqrt(252) : 0
+
+calculate_payoff_ratio() =>
+    avg_win = strategy.wintrades > 0 ? strategy.grossprofit / strategy.wintrades : 0
+    avg_loss = strategy.losstrades > 0 ? strategy.grossloss / strategy.losstrades : 0
+    avg_loss != 0 ? math.abs(avg_win / avg_loss) : 0
+
+// NEW: Memory management function
+clean_arrays(arr, max_size) =>
+    if array.size(arr) > max_size
+        while array.size(arr) > max_size
+            array.pop(arr)
+
+// === 4. Indicator Calculations ===
+
+// Market Regime Detection Function
+detect_market_regime(volatility) =>
+    if volatility > highvol
+        "volatile"
+    else if volatility > midvol
+        "medium"
+    else
+        "calm"
+
+// Detect Current Market Regime
+var string prev_regime = na
+market_regime = detect_market_regime(volatility)
+prev_regime := market_regime[1]
+
+// Perform K-Means clustering once after the training period:
+// We initialize centroids at certain percentiles (highvol, midvol, lowvol).
+// Then we run a limited number of iterations to assign each volatility data point 
+// to the closest centroid. After centroid convergence (or max_iterations), 
+// we store the final centroids (hv_new, mv_new, lv_new) for classifying future bars.
+
+var bool recalculated = false
+max_iterations = 3  // Reduced iterations for performance
+
+// === Adaptive SuperTrend Factors ===
+var float adjusted_factor = fact
+
+// Calculate volatility metrics on every bar for consistency
+recent_stdev = ta.stdev(close, 20)
+recent_sma = ta.sma(close, 20)
+historical_stdev = ta.stdev(close, 100)
+historical_sma = ta.sma(close, 100)
+
+// Derived volatility calculations
+recent_vol = recent_sma != 0 ? recent_stdev / recent_sma * 100 : 0
+historical_vol = historical_sma != 0 ? historical_stdev / historical_sma * 100 : 0
+vol_ratio = historical_vol != 0 ? recent_vol / historical_vol : 1
+
+if optimize_factor and bar_index > 100
+    // Dynamically adjust SuperTrend factor based on recent volatility trends
+    if vol_ratio > 1.3  // Volatility increasing
+        adjusted_factor := math.min(fact * 1.3, 5.0)  // Increase factor to reduce false signals
+    else if vol_ratio < 0.7  // Volatility decreasing
+        adjusted_factor := math.max(fact * 0.8, 2.0)  // Decrease factor to capture more moves
+    else
+        adjusted_factor := fact
+
+// Select parameters based on backtest mode
+factor_to_use = use_deep_settings ? math.min(fact * 0.8, 2.5) : adjusted_factor  // Deep backtest worked better with slightly lower factor
+
+// Make SuperTrend Adaptive to Market Regimes
+[adjusted_fact, adjusted_atr_len] = adjust_supertrend_parameters(market_regime)
+adjusted_fact := adjusted_fact * (factor_to_use / fact)  // Apply our optimized factor ratio
+[ST, dir] = pine_supertrend(adjusted_fact, volatility)
+
+// === 5. Plotting ===
+
+// ----- Plot SuperTrend Lines -----
+upTrend = plot(close > ST ? ST : na, color=color.new(green, 70), style=plot.style_linebr, linewidth=2)
+downTrend = plot(close < ST ? ST : na, color=color.new(red, 70), style=plot.style_linebr, linewidth=2)
+
+// ----- Define bodyMiddle for Fill Function -----
+bodyMiddle = plot((open + close) / 2, "Body Middle", display=display.none)
+
+// ----- Apply Fill Colors -----
+fill(bodyMiddle, upTrend, color.new(green, t2))
+fill(bodyMiddle, downTrend, color.new(red, t1))
+
+// ----- Plot Trend Shapes -----
+plotshape(ta.crossunder(dir, 0) ? ST : na, "Bullish Trend", shape.labelup, location.absolute, green, text="▲", textcolor=chart.fg_color, size=size.small)
+plotshape(ta.crossover(dir, 0) ? ST : na, "Bearish Trend", shape.labeldown, location.absolute, red, text="▼", textcolor=chart.fg_color, size=size.small)
+
+// Visualization for Market Regimes
+bgcolor(market_regime == "volatile" ? color.new(color.red, 90) : na, title="Market Regime")
+
+// === 6. Entry and Exit Conditions ===
+
+// ----- Define Entry Conditions -----
+longCondition = ta.crossunder(dir, 0) and barstate.isconfirmed and (direction_bias != "Short Only")
+shortCondition = ta.crossover(dir, 0) and barstate.isconfirmed and (direction_bias != "Long Only")
+
+// ----- Calculate TP and SL Prices -----
+precision = math.max(syminfo.mintick, 0.0001)
+spread = spread_pips * syminfo.mintick
+
+// Adjusted risk parameters based on market regime
+adjusted_sl_percent = market_regime == "volatile" ? sl_percent * 1.2 : 
+                     market_regime == "medium" ? sl_percent * 1.1 : sl_percent
+
+adjusted_tp_percent = market_regime == "volatile" ? tp_percent * 1.2 : 
+                     market_regime == "medium" ? tp_percent * 1.1 : tp_percent
+
+// Adjusted prices for spread
+long_sl_price = close * (1 - adjusted_sl_percent / 100)
+long_tp_price = close * (1 + adjusted_tp_percent / 100)
+short_sl_price = close * (1 + adjusted_sl_percent / 100)
+short_tp_price = close * (1 - adjusted_tp_percent / 100)
+
+// Calculate ATR-based stop loss prices
+atr_based_long_sl = close - sl_atr_multiplier * current_atr
+atr_based_short_sl = close + sl_atr_multiplier * current_atr
+
+// Determine which stop loss to use based on user selection
+effective_long_sl_price = sl_type == "ATR-Based" ? atr_based_long_sl : long_sl_price
+effective_short_sl_price = sl_type == "ATR-Based" ? atr_based_short_sl : short_sl_price
+
+// ----- Round TP and SL to Market Precision -----
+long_sl_price := math.round(long_sl_price / precision) * precision
+long_tp_price := math.round(long_tp_price / precision) * precision
+short_sl_price := math.round(short_sl_price / precision) * precision
+short_tp_price := math.round(short_tp_price / precision) * precision
+
+effective_long_sl_price := math.round(effective_long_sl_price / precision) * precision
+effective_short_sl_price := math.round(effective_short_sl_price / precision) * precision
+
+// === Adaptive Risk Management ===
+var float current_risk = risk_percent
+var int win_count = 0
+var int loss_count = 0
+var float last_equity = strategy.equity
+
+// Track wins and losses for adaptive risk
+if strategy.closedtrades > 0 and strategy.closedtrades != strategy.closedtrades[1]
+    if strategy.wintrades != strategy.wintrades[1]
+        win_count := win_count + 1
+    else
+        loss_count := loss_count + 1
+    
+    // Update risk based on performance every 5 trades
+    if (win_count + loss_count) % 5 == 0 and adaptive_risk
+        win_rate = win_count / math.max(win_count + loss_count, 1)
+        // Increase risk if win rate is good, decrease if poor
+        if win_rate >= 0.6
+            current_risk := math.min(current_risk * 1.2, max_risk_percent)
+        else if win_rate <= 0.4
+            current_risk := math.max(current_risk * 0.8, risk_percent)
+
+// ----- Position Sizing -----
+dynamic_risk = market_regime == "volatile" ? current_risk * 0.75 : current_risk
+dynamic_position_size = (strategy.equity * dynamic_risk / 100) / (sl_percent / 100 * close)
+max_position_size = math.min((strategy.equity * Leverage) / close, max_contracts)
+position_size = sizing_method == "Dynamic Risk-Based" ? math.min(dynamic_position_size, max_position_size) : order_size
+position_size := math.max(position_size, 0.001)  // Minimum for crypto
+position_size := math.round(position_size / 0.001) * 0.001  // Align with step increment
+
+// Apply short bias (increase short position size)
+if direction_bias == "Short Bias" and shortCondition
+    position_size := position_size * 1.5  // Increase short position size by 50%
+
+// === 7. Date Range Filtering ===
+
+// ----- Define Start and End Times -----
+start_time = timestamp(Start_Y, Start_M, Start_D, 0, 0)
+end_time = timestamp(End_Y, End_M, End_D, 23, 59)
+is_in_date_range = use_date_filter ? (time >= start_time) and (time <= end_time) : true
+
+//Handle trading outside the specified date range:
+//Ensure all positions are closed and alerts are fired as intended.
+
+if not is_in_date_range
+    // Outside the specified trading window, ensure all positions are closed
+    strategy.close_all()
+    alert_message = '{"message": "Trading outside date range. All positions closed."}'
+    alert(alert_message, alert.freq_once_per_bar_close)
+
+// === Profit Protection ===
+var float peak_equity = strategy.equity
+var float drawdown_percent = 0.0
+
+if strategy.equity > peak_equity
+    peak_equity := strategy.equity
+    
+if peak_equity > strategy.initial_capital
+    drawdown_percent := (peak_equity - strategy.equity) / (peak_equity - strategy.initial_capital) * 100
+
+// Adjust position size based on drawdown - reduce risk during drawdowns
+position_size_multiplier = 1.0
+if profit_protection and drawdown_percent > 5
+    position_size_multiplier := math.max(0.5, 1.0 - (drawdown_percent / 100))
+else if profit_protection and strategy.equity > strategy.initial_capital * 1.3
+    // Increase size when doing well
+    position_size_multiplier := math.min(1.5, 1.0 + ((strategy.equity - strategy.initial_capital) / strategy.initial_capital) * 0.2)
+
+// Apply deep backtest optimizations
+if use_deep_settings
+    position_size_multiplier *= 1.5  // Higher position sizes in deep backtest
+    
+// Apply the multiplier to position size calculation
+position_size *= position_size_multiplier
+
+// NEW: Implement max drawdown control
+var bool paused_by_drawdown = false
+
+if pause_trading_on_drawdown and drawdown_percent >= max_drawdown_limit
+    paused_by_drawdown := true
+    if Enable_Debugging
+        label.new(bar_index, high, "Trading paused: Max drawdown (" + str.tostring(max_drawdown_limit) + "%) reached", color=color.red)
+
+// Reset pause when drawdown improves
+if paused_by_drawdown and drawdown_percent < max_drawdown_limit * 0.8  // Adding hysteresis - only resume when drawdown is 20% better
+    paused_by_drawdown := false
+    if Enable_Debugging
+        label.new(bar_index, high, "Trading resumed: Drawdown improved", color=color.green)
+
+// === 8. Order Execution and Alerts ===
+
+// ----- Long Entry Logic -----
+if longCondition and is_in_date_range and not paused_by_drawdown
+    if strategy.position_size < 0 and not Enable_Hedging
+        // Close existing short position only if hedging is disabled
+        strategy.close("Short")
+        if enable_trade_alerts
+            send_conditional_alert(generate_alert_message(uuid_short, "CLOSE_SELL", close, 0, 0, math.abs(strategy.position_size), market_regime), "trade")
+    // Open new long position
+    uuid_long := generate_uuid("Long")
+    sl_price = effective_long_sl_price
+    tp_price = long_tp_price
+    strategy.entry(uuid_long, strategy.long, qty=position_size)
+    if trailing_stop
+        strategy.exit("Long TS", uuid_long, stop=sl_price, trail_price=close, trail_offset=close * trailing_step / 100)
+    else
+        strategy.exit("Long TP/SL", uuid_long, limit=tp_price, stop=sl_price)
+    if enable_trade_alerts
+        send_conditional_alert(generate_alert_message(uuid_long, "BUY", close, sl_price, tp_price, position_size, market_regime), "trade")
+    if Enable_Debugging
+        label.new(bar_index, high, "Long Opened\nPrice: " + str.tostring(close) + "\nSL: " + str.tostring(sl_price), color=color.green)
+
+// ----- Short Entry Logic -----
+if shortCondition and is_in_date_range and not paused_by_drawdown
+    if strategy.position_size > 0 and not Enable_Hedging
+        // Close existing long position only if hedging is disabled
+        strategy.close("Long")
+        if enable_trade_alerts
+            send_conditional_alert(generate_alert_message(uuid_long, "CLOSE_BUY", close, 0, 0, math.abs(strategy.position_size), market_regime), "trade")
+    // Open new short position
+    uuid_short := generate_uuid("Short")
+    sl_price = effective_short_sl_price
+    tp_price = short_tp_price
+    strategy.entry(uuid_short, strategy.short, qty=position_size)
+    if trailing_stop
+        strategy.exit("Short TS", uuid_short, stop=sl_price, trail_price=close, trail_offset=close * trailing_step / 100)
+    else
+        strategy.exit("Short TP/SL", uuid_short, limit=tp_price, stop=sl_price)
+    if enable_trade_alerts
+        send_conditional_alert(generate_alert_message(uuid_short, "SELL", close, sl_price, tp_price, position_size, market_regime), "trade")
+    if Enable_Debugging
+        label.new(bar_index, low, "Short Opened\nPrice: " + str.tostring(close) + "\nSL: " + str.tostring(sl_price), color=color.red)
+
+// Add explicit position closing conditions
+if Enable_Hedging
+    // Add specific close conditions when hedging is enabled
+    if ta.crossunder(dir, 0) and strategy.position_size < 0
+        strategy.close("Short", comment="Close Short on Bullish Signal")
+        if enable_trade_alerts
+            send_conditional_alert(generate_alert_message(uuid_short, "CLOSE_SELL", close, 0, 0, math.abs(strategy.position_size), market_regime), "trade")
+            
+    if ta.crossover(dir, 0) and strategy.position_size > 0
+        strategy.close("Long", comment="Close Long on Bearish Signal")
+        if enable_trade_alerts
+            send_conditional_alert(generate_alert_message(uuid_long, "CLOSE_BUY", close, 0, 0, math.abs(strategy.position_size), market_regime), "trade")
+
+// Alerts for Trade Executions
+if trade_executed
+    alert('Trade Executed for ' + syminfo.ticker + ': ' + order_action + ' at price ' + str.tostring(entry_price), alert.freq_once_per_bar_close)
+
+// === 9. Volatility Clustering ===
+
+// ----- Initialize Variables -----
+var float[] volatility_array = array.new_float()
+var float hv_new = na
+var float mv_new = na
+var float lv_new = na
+var float[] hv = array.new_float()
+var float[] mv = array.new_float()
+var float[] lv = array.new_float()
+var int cluster = 2  // Default to low volatility
+var int hv_size = 0
+var int mv_size = 0
+var int lv_size = 0
+
+// ----- Collect Volatility Data into an Array -----
+if bar_index >= training_data_period - 1
+    if array.size(volatility_array) < training_data_period
+        array.unshift(volatility_array, volatility)
+    else
+        array.pop(volatility_array)
+        array.unshift(volatility_array, volatility)
+
+    // Perform K-Means clustering once after training period:
+    // We initialize centroids at certain percentiles (highvol, midvol, lowvol).
+    // Then we run a limited number of iterations to assign each volatility data point 
+    // to the closest centroid. After centroid convergence (or max_iterations), 
+    // we store the final centroids (hv_new, mv_new, lv_new) for classifying future bars.
+    
+    if not recalculated and array.size(volatility_array) >= training_data_period
+        hv_new := array.percentile_nearest_rank(volatility_array, highvol * 100)
+        mv_new := array.percentile_nearest_rank(volatility_array, midvol * 100)
+        lv_new := array.percentile_nearest_rank(volatility_array, lowvol * 100)
+
+        // ----- K-Means Clustering Logic with Limited Iterations -----
+        for iter = 0 to max_iterations - 1
+            // Initialize clusters
+            array.clear(hv)
+            array.clear(mv)
+            array.clear(lv)
+            for i = 0 to array.size(volatility_array) - 1
+                v = array.get(volatility_array, i)
+                dist_hv = math.abs(v - hv_new)
+                dist_mv = math.abs(v - mv_new)
+                dist_lv = math.abs(v - lv_new)
+                min_dist = math.min(dist_hv, dist_mv, dist_lv)
+                if min_dist == dist_hv
+                    array.push(hv, v)
+                else if min_dist == dist_mv
+                    array.push(mv, v)
+                else
+                    array.push(lv, v)
+            old_hv_new = hv_new
+            old_mv_new = mv_new
+            old_lv_new = lv_new
+            // Update centroids if clusters are not empty
+            if array.size(hv) > 0
+                hv_new := array.avg(hv)
+            if array.size(mv) > 0
+                mv_new := array.avg(mv)
+            if array.size(lv) > 0
+                lv_new := array.avg(lv)
+            // Check convergence
+            if hv_new == old_hv_new and mv_new == old_mv_new and lv_new == old_lv_new
+                break
+        recalculated := true  // Clustering done once after training period
+
+    // ----- Calculate Distance to Centroids -----
+    if recalculated
+        vdist_hv = math.abs(volatility - hv_new)
+        vdist_mv = math.abs(volatility - mv_new)
+        vdist_lv = math.abs(volatility - lv_new)
+        min_dist = math.min(vdist_hv, vdist_mv, vdist_lv)
+        if min_dist == vdist_hv
+            cluster := 0  // High volatility
+        else if min_dist == vdist_mv
+            cluster := 1  // Medium volatility
+        else
+            cluster := 2  // Low volatility
+
+        // --- Update ATR Table after Clustering ---
+        hv_size := array.size(hv)
+        mv_size := array.size(mv)
+        lv_size := array.size(lv)
+
+        if not na(atr_table)
+            update_atr_table(hv_new, mv_new, lv_new, hv_size, mv_size, lv_size, current_atr)
+            highlight_cluster_row(atr_table, cluster)  // Encapsulated function for updating background
+
+// NEW: Memory management for volatility array
+max_array_size = 2 * training_data_period  // Keep it reasonable but still sufficient for analysis
+if bar_index % 50 == 0 // Check periodically rather than every bar
+    clean_arrays(volatility_array, max_array_size)
+    clean_arrays(hv, max_array_size / 3)
+    clean_arrays(mv, max_array_size / 3)
+    clean_arrays(lv, max_array_size / 3)
+
+// === 10. Tables and Labels ===
+
+// Define table positions based on user settings
+get_table_position(pos_string) =>
+    position_value = switch pos_string
+        "Top Left" => position.top_left
+        "Top Right" => position.top_right
+        "Bottom Left" => position.bottom_left
+        "Bottom Right" => position.bottom_right
+        => position.bottom_right
+    position_value
+
+// Create tables with user-defined settings
+perf_table_pos = get_table_position(performance_table_position)
+trades_table_pos = get_table_position(trades_table_position)
+atr_table_pos = get_table_position(atr_table_position)
+
+// Fix table declarations - separate variable declarations from assignments
+var performance_table = table.new(perf_table_pos, 3, enable_custom_tables and not compact_mode ? 7 : 5, bgcolor=color.new(color.black, enable_custom_tables ? table_transparency : 20), frame_width=2, frame_color=color.gray)
+var trades_table = table.new(trades_table_pos, 7, 6, bgcolor=color.new(color.black, enable_custom_tables ? table_transparency : 20), frame_width=2, frame_color=color.gray)
+
+// Initialize atr_table with better visibility - this is the CORRECT initialization to keep
+if barstate.isfirst  // Changed from bar_index == 0 for more reliability
+    atr_table := table.new(atr_table_pos, 4, 4, bgcolor=color.new(color.black, 20), frame_width=2, frame_color=color.gray)
+
+    // Setup ATR Table Headers with better visibility
+    table.cell(atr_table, 0, 0, "Cluster", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(atr_table, 0, 1, "Centroid", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(atr_table, 0, 2, "Size", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(atr_table, 0, 3, "Current", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+
+    table.cell(atr_table, 1, 0, "High", bgcolor=color.new(color.red, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(atr_table, 2, 0, "Medium", bgcolor=color.new(color.orange, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(atr_table, 3, 0, "Low", bgcolor=color.new(color.green, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+
+    // Setup Trades Table Headers with better visibility
+    table.cell(trades_table, 0, 0, "Order ID", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(trades_table, 1, 0, "Action", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(trades_table, 2, 0, "Contracts", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(trades_table, 3, 0, "Ticker", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(trades_table, 4, 0, "Stop", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(trades_table, 5, 0, "TP", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(trades_table, 6, 0, "Risk %", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+
+    // Setup performance table headers with better visibility
+    table.cell(performance_table, 0, 0, "Performance", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(performance_table, 1, 0, "Value", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(performance_table, 2, 0, "Change %", bgcolor=color.new(color.blue, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    
+    table.cell(performance_table, 0, 1, "Equity", bgcolor=color.new(color.gray, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(performance_table, 0, 2, "Drawdown", bgcolor=color.new(color.gray, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(performance_table, 0, 3, "Win Rate", bgcolor=color.new(color.gray, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(performance_table, 0, 4, "Profit Factor", bgcolor=color.new(color.gray, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+
+// Add new performance metrics to the performance table when using custom tables
+if enable_custom_tables and not compact_mode
+    table.cell(performance_table, 0, 5, "Sharpe Ratio", bgcolor=color.new(color.gray, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+    table.cell(performance_table, 0, 6, "Payoff Ratio", bgcolor=color.new(color.gray, 40), text_color=color.white, text_halign=text.align_center, text_size=size.normal)
+
+// ----- Update Trades Table Data with improved visibility -----
+if strategy.position_size != 0
+    action = strategy.position_size > 0 ? "Long" : "Short"
+    color_bg = strategy.position_size > 0 ? color.new(color.green, 40) : color.new(color.red, 40)
+    stop_level = strategy.position_size > 0 ? long_sl_price : short_sl_price
+    profit_level = strategy.position_size > 0 ? long_tp_price : short_tp_price
+
+    table.cell(trades_table, 0, 1, strategy.position_size > 0 ? uuid_long : uuid_short, bgcolor=color_bg, text_color=color.white, text_size=size.normal)
+    table.cell(trades_table, 1, 1, action, bgcolor=color_bg, text_color=color.white, text_size=size.normal)
+    table.cell(trades_table, 2, 1, str.tostring(position_size), bgcolor=color.new(color.blue, 40), text_color=color.white, text_size=size.normal)
+    table.cell(trades_table, 3, 1, syminfo.ticker, bgcolor=color.new(color.gray, 40), text_color=color.white, text_size=size.normal)
+    table.cell(trades_table, 4, 1, str.tostring(stop_level), bgcolor=color.new(color.orange, 40), text_color=color.white, text_size=size.normal)
+    table.cell(trades_table, 5, 1, str.tostring(profit_level), bgcolor=color.new(color.green, 40), text_color=color.white, text_size=size.normal)
+    table.cell(trades_table, 6, 1, str.tostring(current_risk) + "%", bgcolor=color.new(color.purple, 40), text_color=color.white, text_size=size.normal)
+
+// Calculate metrics on every bar for consistency
+var float sharpe = 0.0
+var float payoff = 0.0
+sharpe := calculate_sharpe_ratio()
+payoff := calculate_payoff_ratio()
+
+// Update performance table with better visibility and new metrics
+if barstate.islast or (bar_index % 10 == 0) or strategy.closedtrades != strategy.closedtrades[1]
+    win_rate = strategy.wintrades / math.max(strategy.closedtrades, 1) * 100
+    profit_factor = strategy.grossprofit / math.max(strategy.grossloss, 1)
+    
+    equity_color = strategy.equity > strategy.initial_capital ? color.green : color.red
+    dd_color = drawdown_percent > 5 ? color.red : drawdown_percent > 2 ? color.orange : color.green
+    wr_color = win_rate > 60 ? color.green : win_rate > 40 ? color.orange : color.red
+    pf_color = profit_factor > 2 ? color.green : profit_factor > 1 ? color.orange : color.red
+    
+    // Make backgrounds darker for better text visibility
+    equity_bg = strategy.equity > strategy.initial_capital ? color.new(color.green, 40) : color.new(color.red, 40)
+    dd_bg = drawdown_percent > 5 ? color.new(color.red, 40) : drawdown_percent > 2 ? color.new(color.orange, 40) : color.new(color.green, 40)
+    wr_bg = win_rate > 60 ? color.new(color.green, 40) : win_rate > 40 ? color.new(color.orange, 40) : color.new(color.red, 40)
+    pf_bg = profit_factor > 2 ? color.new(color.green, 40) : profit_factor > 1 ? color.new(color.orange, 40) : color.new(color.red, 40)
+    
+    // Determine colors for additional metrics
+    sharpe_bg = sharpe > 1.0 ? color.new(color.green, 40) : sharpe > 0.5 ? color.new(color.orange, 40) : color.new(color.red, 40)
+    payoff_bg = payoff > 2.0 ? color.new(color.green, 40) : payoff > 1.0 ? color.new(color.orange, 40) : color.new(color.red, 40)
+    
+    // Use safe updates for all existing metrics
+    safe_table_update(performance_table, 1, 1, str.tostring(strategy.equity, "#.##"), color.white, equity_bg, size.normal)
+    safe_table_update(performance_table, 2, 1, str.tostring((strategy.equity - strategy.initial_capital) / strategy.initial_capital * 100, "#.##") + "%", color.white, equity_bg, size.normal)
+    
+    safe_table_update(performance_table, 1, 2, str.tostring(drawdown_percent, "#.##") + "%", color.white, dd_bg, size.normal)
+    safe_table_update(performance_table, 2, 2, "", color.white, dd_bg, size.normal)
+    
+    safe_table_update(performance_table, 1, 3, str.tostring(win_rate, "#.##") + "%", color.white, wr_bg, size.normal)
+    safe_table_update(performance_table, 2, 3, "", color.white, wr_bg, size.normal)
+    
+    safe_table_update(performance_table, 1, 4, str.tostring(profit_factor, "#.##"), color.white, pf_bg, size.normal)
+    safe_table_update(performance_table, 2, 4, "", color.white, pf_bg, size.normal)
+    
+    // Update additional metrics if needed
+    if enable_custom_tables and not compact_mode
+        safe_table_update(performance_table, 1, 5, str.tostring(sharpe, "#.##"), color.white, sharpe_bg, size.normal)
+        safe_table_update(performance_table, 2, 5, "", color.white, sharpe_bg, size.normal)
+        
+        safe_table_update(performance_table, 1, 6, str.tostring(payoff, "#.##"), color.white, payoff_bg, size.normal)
+        safe_table_update(performance_table, 2, 6, "", color.white, payoff_bg, size.normal)
+
+// Update ATR table using the improved function that accounts for mini mode
+update_atr_table_enhanced(hv_val, mv_val, lv_val, hv_sz, mv_sz, lv_sz, cur_atr) =>
+    if not na(atr_table) and enable_all_tables and enable_atr_table
+        // Update Centroid (ATR) values with better visibility
+        table.cell(atr_table, 1, 1, not na(hv_val) ? str.format("{0,number,#.##}", hv_val) : "N/A", text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.red, 60))
+        table.cell(atr_table, 2, 1, not na(mv_val) ? str.format("{0,number,#.##}", mv_val) : "N/A", text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.orange, 60))
+        table.cell(atr_table, 3, 1, not na(lv_val) ? str.format("{0,number,#.##}", lv_val) : "N/A", text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.green, 60))
+
+        if not mini_table_mode
+            // Update Cluster Sizes with better visibility
+            table.cell(atr_table, 1, 2, str.tostring(hv_sz), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.red, 60))
+            table.cell(atr_table, 2, 2, str.tostring(mv_sz), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.orange, 60))
+            table.cell(atr_table, 3, 2, str.tostring(lv_sz), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.green, 60))
+
+        // Update Current ATR with better visibility
+        current_col = mini_table_mode ? 2 : 3
+        table.cell(atr_table, 1, current_col, str.format("{0,number,#.##}", cur_atr), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.red, 60))
+        table.cell(atr_table, 2, current_col, str.format("{0,number,#.##}", cur_atr), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.orange, 60))
+        table.cell(atr_table, 3, current_col, str.format("{0,number,#.##}", cur_atr), text_halign=text.align_center, text_color=color.white, bgcolor=color.new(color.green, 60))
+
+// Replace ATR table update with enhanced version in volatility clustering section
+if recalculated
+    // ...existing code...
+    if not na(atr_table)
+        update_atr_table_enhanced(hv_new, mv_new, lv_new, hv_size, mv_size, lv_size, current_atr)
+        highlight_cluster_row(atr_table, cluster)
+
+// === 11. Alerts ===
+
+// ----- Trend Change Alerts -----
+alertcondition(ta.crossunder(dir, 0) and barstate.isconfirmed, "Bullish Trend Shift", "Price crossed under the SuperTrend.")
+alertcondition(ta.crossover(dir, 0) and barstate.isconfirmed, "Bearish Trend Shift", "Price crossed over the SuperTrend.")
+alertcondition(cluster == 0 and cluster[1] != 0 and barstate.isconfirmed, "High Volatility", "Cluster identified as High Volatility.")
+alertcondition(cluster == 1 and cluster[1] != 1 and barstate.isconfirmed, "Medium Volatility", "Cluster identified as Medium Volatility.")
+alertcondition(cluster == 2 and cluster[1] != 2 and barstate.isconfirmed, "Low Volatility", "Cluster identified as Low Volatility.")
+
+// Add conditional trend alerts
+if enable_trend_alerts
+    if ta.crossunder(dir, 0) and barstate.isconfirmed
+        send_conditional_alert("Bullish Trend Shift detected on " + syminfo.ticker, "trend")
+    if ta.crossover(dir, 0) and barstate.isconfirmed
+        send_conditional_alert("Bearish Trend Shift detected on " + syminfo.ticker, "trend")
+
+// Add conditional volatility regime alerts
+if enable_volatility_alerts
+    if cluster == 0 and cluster[1] != 0 and barstate.isconfirmed
+        send_conditional_alert("High Volatility Regime detected on " + syminfo.ticker, "volatility")
+    if cluster == 1 and cluster[1] != 1 and barstate.isconfirmed
+        send_conditional_alert("Medium Volatility Regime detected on " + syminfo.ticker, "volatility")
+    if cluster == 2 and cluster[1] != 2 and barstate.isconfirmed
+        send_conditional_alert("Low Volatility Regime detected on " + syminfo.ticker, "volatility")

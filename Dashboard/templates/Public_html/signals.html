@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title }}</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"
+    />
+    <style>
+      .sidebar {
+        min-height: 100vh;
+        background-color: #4e73df;
+        background-image: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        background-size: cover;
+      }
+      .sidebar-brand {
+        padding: 1.5rem 1rem;
+        text-align: center;
+        color: white;
+        font-weight: 800;
+        font-size: 1.2rem;
+      }
+      .sidebar-item {
+        padding: 0.8rem 1rem;
+        color: rgba(255, 255, 255, 0.8);
+        transition: all 0.2s;
+      }
+      .sidebar-item:hover,
+      .sidebar-item.active {
+        color: white;
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      .sidebar-item i {
+        margin-right: 0.5rem;
+        width: 1.2rem;
+        text-align: center;
+      }
+      .content-wrapper {
+        min-height: 100vh;
+        background-color: #f8f9fc;
+      }
+      .navbar {
+        background-color: white;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+      }
+      .card {
+        margin-bottom: 1.5rem;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+      }
+      .card-header {
+        background-color: #f8f9fc;
+        border-bottom: 1px solid #e3e6f0;
+        font-weight: bold;
+      }
+      footer {
+        background-color: white;
+        border-top: 1px solid #e3e6f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid p-0">
+      <div class="row g-0">
+        <!-- Sidebar -->
+        <div class="col-lg-2 sidebar">
+          <div class="sidebar-brand">
+            <i class="fa fa-robot"></i> Jamso AI Bot
+          </div>
+          <hr class="bg-white" />
+          <a
+            href="/dashboard/"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-dashboard"></i> Dashboard
+          </a>
+          <a
+            href="/dashboard/trades"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-exchange"></i> Trades
+          </a>
+          <a
+            href="/dashboard/signals"
+            class="d-block text-decoration-none sidebar-item active"
+          >
+            <i class="fa fa-bell"></i> Signals
+          </a>
+          <a
+            href="/dashboard/analytics"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-chart-line"></i> Analytics
+          </a>
+          <hr class="bg-white" />
+          <a
+            href="/dashboard/settings"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-gear"></i> Settings
+          </a>
+          <a
+            href="/dashboard/auth/logout"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-sign-out"></i> Logout
+          </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-10 content-wrapper">
+          <!-- Navbar -->
+          <nav class="navbar navbar-expand navbar-light p-3">
+            <div class="container-fluid">
+              <div>
+                <h1 class="h3 mb-0 text-gray-800">Trading Signals</h1>
+              </div>
+              <div class="ms-auto">
+                <span class="me-2">Welcome, {{ username }}</span>
+              </div>
+            </div>
+          </nav>
+
+          <!-- Page Content -->
+          <div class="container-fluid p-4">
+            <!-- Signals Table Card -->
+            <div class="card">
+              <div
+                class="card-header d-flex justify-content-between align-items-center"
+              >
+                <span>Recent Trading Signals</span>
+                <div class="dropdown">
+                  <button
+                    class="btn btn-sm btn-secondary dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                  >
+                    Filter
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">All Signals</a></li>
+                    <li><a class="dropdown-item" href="#">Buy Signals</a></li>
+                    <li><a class="dropdown-item" href="#">Sell Signals</a></li>
+                    <li><a class="dropdown-item" href="#">Completed</a></li>
+                    <li><a class="dropdown-item" href="#">Pending</a></li>
+                    <li><a class="dropdown-item" href="#">Failed</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-bordered table-striped">
+                    <thead class="table-light">
+                      <tr>
+                        <th>ID</th>
+                        <th>Time</th>
+                        <th>Order ID</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                        <th>Direction</th>
+                        <th>Size</th>
+                        <th>Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% if signals %} {% for signal in signals %}
+                      <tr>
+                        <td>{{ signal.id }}</td>
+                        <td>{{ signal.timestamp }}</td>
+                        <td>{{ signal.order_id or 'N/A' }}</td>
+                        <td>
+                          {% if signal.status == 'completed' %}
+                          <span class="badge bg-success">Completed</span>
+                          {% elif signal.status == 'pending' %}
+                          <span class="badge bg-warning">Pending</span>
+                          {% elif signal.status == 'failed' %}
+                          <span class="badge bg-danger">Failed</span>
+                          {% else %}
+                          <span class="badge bg-secondary"
+                            >{{ signal.status }}</span
+                          >
+                          {% endif %}
+                        </td>
+                        <td>{{ signal.trade_action }}</td>
+                        <td>
+                          {% if signal.trade_direction == 'BUY' %}
+                          <span class="text-success">Buy</span>
+                          {% elif signal.trade_direction == 'SELL' %}
+                          <span class="text-danger">Sell</span>
+                          {% else %} {{ signal.trade_direction }} {% endif %}
+                        </td>
+                        <td>{{ signal.position_size }}</td>
+                        <td>
+                          <button
+                            class="btn btn-sm btn-primary"
+                            title="View Details"
+                          >
+                            <i class="fa fa-eye"></i>
+                          </button>
+                        </td>
+                      </tr>
+                      {% endfor %} {% else %}
+                      <tr>
+                        <td colspan="8" class="text-center">
+                          No signals data available
+                        </td>
+                      </tr>
+                      {% endif %}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div
+                  class="d-flex justify-content-between align-items-center mt-3"
+                >
+                  <span
+                    >Showing {{ signals|length if signals else 0 }}
+                    signals</span
+                  >
+                  <nav>
+                    <ul class="pagination mb-0">
+                      <li class="page-item disabled">
+                        <a class="page-link" href="#">Previous</a>
+                      </li>
+                      <li class="page-item active">
+                        <a class="page-link" href="#">1</a>
+                      </li>
+                      <li class="page-item">
+                        <a class="page-link" href="#">2</a>
+                      </li>
+                      <li class="page-item">
+                        <a class="page-link" href="#">3</a>
+                      </li>
+                      <li class="page-item">
+                        <a class="page-link" href="#">Next</a>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
+              </div>
+            </div>
+
+            <!-- Signal Distribution Card -->
+            <div class="card">
+              <div class="card-header">
+                <span>Signal Distribution</span>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <h5 class="mb-3">By Status</h5>
+                    <div class="mb-4">
+                      <h6 class="small">
+                        Completed <span class="float-end">60%</span>
+                      </h6>
+                      <div class="progress mb-2">
+                        <div
+                          class="progress-bar bg-success"
+                          role="progressbar"
+                          style="width: 60%"
+                        ></div>
+                      </div>
+                    </div>
+                    <div class="mb-4">
+                      <h6 class="small">
+                        Pending <span class="float-end">20%</span>
+                      </h6>
+                      <div class="progress mb-2">
+                        <div
+                          class="progress-bar bg-warning"
+                          role="progressbar"
+                          style="width: 20%"
+                        ></div>
+                      </div>
+                    </div>
+                    <div class="mb-4">
+                      <h6 class="small">
+                        Failed <span class="float-end">20%</span>
+                      </h6>
+                      <div class="progress mb-2">
+                        <div
+                          class="progress-bar bg-danger"
+                          role="progressbar"
+                          style="width: 20%"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <h5 class="mb-3">By Direction</h5>
+                    <div class="mb-4">
+                      <h6 class="small">
+                        Buy <span class="float-end">55%</span>
+                      </h6>
+                      <div class="progress mb-2">
+                        <div
+                          class="progress-bar bg-success"
+                          role="progressbar"
+                          style="width: 55%"
+                        ></div>
+                      </div>
+                    </div>
+                    <div class="mb-4">
+                      <h6 class="small">
+                        Sell <span class="float-end">45%</span>
+                      </h6>
+                      <div class="progress mb-2">
+                        <div
+                          class="progress-bar bg-danger"
+                          role="progressbar"
+                          style="width: 45%"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <footer class="py-4 mt-auto">
+            <div class="container-fluid">
+              <div class="text-center">
+                <span>Jamso AI Trading Bot &copy; 2025</span>
+              </div>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

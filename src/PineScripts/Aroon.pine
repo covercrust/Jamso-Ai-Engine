@@ -1,0 +1,441 @@
+//@version=5
+strategy("Jamso Enhanced Alert SuperTrend", overlay=true, max_labels_count=500, initial_capital=5000, pyramiding=3, calc_on_every_tick=false)
+import TradingView/ta/7
+
+// === 1. Inputs ===
+
+// ----- Date Range Inputs -----
+group_daterange = 'Date Range'
+Start_Y = input.int(title='Start Year', defval=2024, group=group_daterange)
+Start_M = input.int(title='Start Month', defval=1, minval=1, maxval=12, group=group_daterange)
+Start_D = input.int(title='Start Day', defval=1, minval=1, maxval=31, group=group_daterange)
+End_Y = input.int(title='End Year', defval=2024, group=group_daterange)
+End_M = input.int(title='End Month', defval=12, minval=1, maxval=12, group=group_daterange)
+End_D = input.int(title='End Day', defval=31, minval=1, maxval=31, group=group_daterange)
+
+// ----- Appearance Inputs -----
+group_appearance = "Appearance"
+t1 = input.int(70, "Transparency 1", maxval=100, minval=0, group=group_appearance)
+t2 = input.int(85, "Transparency 2", maxval=100, minval=0, group=group_appearance)
+green = input.color(color.new(color.rgb(0, 255, 187), 0), "Bullish Color", group=group_appearance)
+red = input.color(color.new(color.rgb(255, 17, 0), 0), "Bearish Color", group=group_appearance)
+
+// ----- Miscellaneous Inputs -----
+group_misc = 'Miscellaneous'
+Enable_Debugging = input.bool(title='Enable Debugging?', defval=false, group=group_misc)
+Enable_Hedging = input.bool(title='Enable Hedging?', defval=false, group=group_misc)
+
+// ----- SuperTrend Settings -----
+group_supertrend = "SuperTrend Settings"
+atr_len = input.int(10, "ATR Length", group=group_supertrend)
+fact = input.float(3.0, "SuperTrend Factor", group=group_supertrend)
+
+// ----- Clustering Inputs -----
+group_clustering = "K-Means Settings"
+training_data_period = input.int(100, "Training Data Length", group=group_clustering)
+highvol = input.float(0.75, "Initial High Volatility Percentile Guess", maxval=1, group=group_clustering)
+midvol = input.float(0.5, "Initial Medium Volatility Percentile Guess", maxval=1, group=group_clustering)
+lowvol = input.float(0.25, "Initial Low Volatility Percentile Guess", maxval=1, group=group_clustering)
+
+// ----- Risk Management Inputs -----
+group_risk = "Risk Management"
+risk_percent = input.float(1.0, title="Risk % of Capital", group=group_risk, minval=0.1, maxval=10)
+sl_percent = input.float(0.5, title="Stop Loss (%)", group=group_risk, minval=0.1, maxval=10)
+tp_percent = input.float(1.5, title="Take Profit (%)", group=group_risk, minval=0.1, maxval=10)
+sizing_method = input.string(title="Sizing Method", defval="Dynamic Risk-Based", options=["Dynamic Risk-Based", "Fixed Sizing"], group=group_risk)
+order_size = input.float(title="Fixed Order Size", defval=1.0, minval=0.001, group=group_risk)
+spread_pips = input.float(title='Spread in Pips', defval=0.0, minval=0.0, group=group_risk)
+
+// === 2. Variable Declarations ===
+
+// Calculate ATR on each bar
+current_atr = ta.atr(atr_len)
+
+// Track trade execution
+var bool trade_executed = false
+var string order_action = na
+var float entry_price = na
+
+// ----- Leverage Mapping -----
+default_leverage = 20.0
+var string uuid_long = na
+var string uuid_short = na
+
+// Ensure UUID is unique per trade and resets after trade closure
+generate_uuid(type) =>
+    type + "_" + str.tostring(time)  // Corrected: Removed second argument
+
+if na(uuid_long) or (strategy.position_size == 0 and strategy.position_size[1] > 0)
+    uuid_long := generate_uuid("Long")
+if na(uuid_short) or (strategy.position_size == 0 and strategy.position_size[1] < 0)
+    uuid_short := generate_uuid("Short")
+
+get_dynamic_leverage(ticker_type) =>
+    switch ticker_type
+        'forex' => 200.0
+        'index' => 200.0
+        'commodity' => 200.0
+        'crypto' => 20.0
+        'stock' => 20.0
+        'futures' => 50.0
+        => default_leverage
+
+ticker_type = syminfo.type
+Leverage = get_dynamic_leverage(ticker_type)
+
+// ----- Volatility Calculation -----
+volatility = ta.atr(atr_len)
+
+// Declare atr_table
+var table atr_table = na
+
+// === 3. Functions ===
+
+// Debugging Helper Function
+debug_log(msg, color_code) =>
+    if Enable_Debugging
+        label.new(bar_index, high, msg, color=color_code, style=label.style_circle)
+
+// ----- SuperTrend Function -----
+pine_supertrend(factor, atr_value) =>
+    src = hl2
+    upperBand = src + factor * atr_value
+    lowerBand = src - factor * atr_value
+    prevLowerBand = nz(lowerBand[1], lowerBand)
+    prevUpperBand = nz(upperBand[1], upperBand)
+
+    lowerBand := lowerBand > prevLowerBand or close[1] < prevLowerBand ? lowerBand : prevLowerBand
+    upperBand := upperBand < prevUpperBand or close[1] > prevUpperBand ? upperBand : prevUpperBand
+
+    int _direction = na  // Declared with type
+    float superTrend = na  // Declared with type
+    prevSuperTrend = nz(superTrend[1], src)
+
+    if na(prevSuperTrend)
+        _direction := 1
+    else if prevSuperTrend == prevUpperBand[1]
+        _direction := close > upperBand ? -1 : 1
+    else
+        _direction := close < lowerBand ? 1 : -1
+
+    superTrend := _direction == -1 ? lowerBand : upperBand
+    [superTrend, _direction]
+
+// Function to generate alert message with Ticker and Webhook Token
+generate_alert_message(order_id, action, market_price, sl_price, tp_price, position_size) =>
+    '{"order_id": "' + order_id + '", "ticker": "' + syminfo.ticker + '", "order_action": "' + action + '", "market_price": ' + str.tostring(market_price) + ', "stop_loss": ' + str.tostring(sl_price) + ', "take_profit": ' + str.tostring(tp_price) + ', "position_size": ' + str.tostring(position_size) + ', "X-Webhook-Token": "6a87cf683ac94bc7f83bc09ba643dc578538d4eb46c931a60dc4fe3ec3c159cd"}'  // Add the Webhook Token
+
+// Function to update ATR table cells
+update_atr_table(hv_val, mv_val, lv_val, hv_sz, mv_sz, lv_sz, cur_atr) =>
+    // Update Centroid (ATR) values
+    table.cell(atr_table, 1, 1, not na(hv_val) ? str.format("{0,number,#.##}", hv_val) : "N/A", text_halign=text.align_center)
+    table.cell(atr_table, 2, 1, not na(mv_val) ? str.format("{0,number,#.##}", mv_val) : "N/A", text_halign=text.align_center)
+    table.cell(atr_table, 3, 1, not na(lv_val) ? str.format("{0,number,#.##}", lv_val) : "N/A", text_halign=text.align_center)
+
+    // Update Cluster Sizes
+    table.cell(atr_table, 1, 2, str.tostring(hv_sz), text_halign=text.align_center)
+    table.cell(atr_table, 2, 2, str.tostring(mv_sz), text_halign=text.align_center)
+    table.cell(atr_table, 3, 2, str.tostring(lv_sz), text_halign=text.align_center)
+
+    // Update Current ATR
+    table.cell(atr_table, 1, 3, str.format("{0,number,#.##}", cur_atr), text_halign=text.align_center)
+    table.cell(atr_table, 2, 3, str.format("{0,number,#.##}", cur_atr), text_halign=text.align_center)
+    table.cell(atr_table, 3, 3, str.format("{0,number,#.##}", cur_atr), text_halign=text.align_center)
+
+// Function to reset table background colors
+reset_table_background(table_name) =>
+    for row = 1 to 3
+        for col = 0 to 3
+            table.cell_set_bgcolor(table_name, row, col, na)
+
+// Function to highlight the active cluster row
+highlight_cluster_row(table_name, active_cluster) =>
+    reset_table_background(table_name)
+    cluster_row = active_cluster == 0 ? 1 : active_cluster == 1 ? 2 : 3
+    cluster_color = active_cluster == 0 ? color.new(color.red, 85) : active_cluster == 1 ? color.new(color.orange, 85) : color.new(color.green, 85)
+    for col = 0 to 3
+        table.cell_set_bgcolor(table_name, cluster_row, col, cluster_color)
+
+// === 4. Indicator Calculations ===
+
+// Market Regime Detection Function
+detect_market_regime(volatility) =>
+    if volatility > highvol
+        "volatile"
+    else if volatility > midvol
+        "medium"
+    else
+        "calm"
+
+// Detect Current Market Regime
+var string prev_regime = na
+market_regime = detect_market_regime(volatility)
+prev_regime := market_regime[1]
+
+// Perform K-Means clustering once after the training period:
+// We initialize centroids at certain percentiles (highvol, midvol, lowvol).
+// Then we run a limited number of iterations to assign each volatility data point 
+// to the closest centroid. After centroid convergence (or max_iterations), 
+// we store the final centroids (hv_new, mv_new, lv_new) for classifying future bars.
+
+var bool recalculated = false
+max_iterations = 3  // Reduced iterations for performance
+
+// Make SuperTrend Adaptive to Market Regimes
+atr_factor = market_regime == "volatile" ? fact * 1.5 : fact
+[ST, dir] = pine_supertrend(atr_factor, volatility)
+
+// === 5. Plotting ===
+
+// ----- Plot SuperTrend Lines -----
+upTrend = plot(close > ST ? ST : na, color=color.new(green, 70), style=plot.style_linebr, linewidth=2)
+downTrend = plot(close < ST ? ST : na, color=color.new(red, 70), style=plot.style_linebr, linewidth=2)
+
+// ----- Define bodyMiddle for Fill Function -----
+bodyMiddle = plot((open + close) / 2, "Body Middle", display=display.none)
+
+// ----- Apply Fill Colors -----
+fill(bodyMiddle, upTrend, color.new(green, t2))
+fill(bodyMiddle, downTrend, color.new(red, t1))
+
+// ----- Plot Trend Shapes -----
+plotshape(ta.crossunder(dir, 0) ? ST : na, "Bullish Trend", shape.labelup, location.absolute, green, text="▲", textcolor=chart.fg_color, size=size.small)
+plotshape(ta.crossover(dir, 0) ? ST : na, "Bearish Trend", shape.labeldown, location.absolute, red, text="▼", textcolor=chart.fg_color, size=size.small)
+
+// Visualization for Market Regimes
+bgcolor(market_regime == "volatile" ? color.new(color.red, 90) : na, title="Market Regime")
+
+// === 6. Entry and Exit Conditions ===
+
+// ----- Define Entry Conditions -----
+longCondition = ta.crossunder(dir, 0) and barstate.isconfirmed
+shortCondition = ta.crossover(dir, 0) and barstate.isconfirmed
+
+// ----- Calculate TP and SL Prices -----
+precision = math.max(syminfo.mintick, 0.0001)
+spread = spread_pips * syminfo.mintick
+
+// Adjusted prices for spread
+long_sl_price = close * (1 - sl_percent / 100)
+long_tp_price = close * (1 + tp_percent / 100)
+short_sl_price = close * (1 + sl_percent / 100)
+short_tp_price = close * (1 - tp_percent / 100)
+
+// ----- Round TP and SL to Market Precision -----
+long_sl_price := math.round(long_sl_price / precision) * precision
+long_tp_price := math.round(long_tp_price / precision) * precision
+short_sl_price := math.round(short_sl_price / precision) * precision
+short_tp_price := math.round(short_tp_price / precision) * precision
+
+// ----- Position Sizing -----
+dynamic_risk = market_regime == "volatile" ? risk_percent * 0.75 : risk_percent
+dynamic_position_size = (strategy.equity * dynamic_risk / 100) / (sl_percent / 100 * close)
+max_position_size = (strategy.equity * Leverage) / close
+position_size = sizing_method == "Dynamic Risk-Based" ? math.min(dynamic_position_size, max_position_size) : order_size
+position_size := math.max(position_size, 0.001)  // Minimum for crypto
+position_size := math.round(position_size / 0.001) * 0.001  // Align with step increment
+
+// === 7. Date Range Filtering ===
+
+// ----- Define Start and End Times -----
+start_time = timestamp(Start_Y, Start_M, Start_D, 0, 0)
+end_time = timestamp(End_Y, End_M, End_D, 23, 59)
+is_in_date_range = (time >= start_time) and (time <= end_time)
+
+//Handle trading outside the specified date range:
+//Ensure all positions are closed and alerts are fired as intended.
+
+if not is_in_date_range
+    // Outside the specified trading window, ensure all positions are closed
+    strategy.close_all()
+    alert_message = '{"message": "Trading outside date range. All positions closed."}'
+    alert(alert_message, alert.freq_once_per_bar_close)
+
+// === 8. Order Execution and Alerts ===
+
+// ----- Long Entry Logic -----
+if longCondition and is_in_date_range
+    if strategy.position_size < 0
+        // Close existing short position
+        strategy.close("Short")
+        alert(generate_alert_message(uuid_short, "CLOSE_SELL", close, 0, 0, math.abs(strategy.position_size)), alert.freq_once_per_bar_close)
+    // Open new long position
+    uuid_long := generate_uuid("Long")
+    sl_price = long_sl_price
+    tp_price = long_tp_price
+    strategy.entry(uuid_long, strategy.long, qty=position_size)
+    alert(generate_alert_message(uuid_long, "BUY", close, sl_price, tp_price, position_size), alert.freq_once_per_bar_close)
+    if Enable_Debugging
+        label.new(bar_index, high, "Long Opened\nPrice: " + str.tostring(close), color=color.green)
+
+// ----- Short Entry Logic -----
+if shortCondition and is_in_date_range
+    if strategy.position_size > 0
+        // Close existing long position
+        strategy.close("Long")
+        alert(generate_alert_message(uuid_long, "CLOSE_BUY", close, 0, 0, math.abs(strategy.position_size)), alert.freq_once_per_bar_close)
+    // Open new short position
+    uuid_short := generate_uuid("Short")
+    sl_price = short_sl_price
+    tp_price = short_tp_price
+    strategy.entry(uuid_short, strategy.short, qty=position_size)
+    alert(generate_alert_message(uuid_short, "SELL", close, sl_price, tp_price, position_size), alert.freq_once_per_bar_close)
+    if Enable_Debugging
+        label.new(bar_index, low, "Short Opened\nPrice: " + str.tostring(close), color=color.red)
+
+// Alerts for Trade Executions
+if trade_executed
+    alert('Trade Executed for ' + syminfo.ticker + ': ' + order_action + ' at price ' + str.tostring(entry_price), alert.freq_once_per_bar_close)
+
+// === 9. Volatility Clustering ===
+
+// ----- Initialize Variables -----
+var float[] volatility_array = array.new_float()
+var float hv_new = na
+var float mv_new = na
+var float lv_new = na
+var float[] hv = array.new_float()
+var float[] mv = array.new_float()
+var float[] lv = array.new_float()
+var int cluster = 2  // Default to low volatility
+var int hv_size = 0
+var int mv_size = 0
+var int lv_size = 0
+
+// Initialize atr_table
+if bar_index == 0
+    atr_table := table.new(position.top_right, 4, 4, bgcolor=color.new(color.gray, 95), frame_width=1, frame_color=color.gray)
+
+// ----- Collect Volatility Data into an Array -----
+if bar_index >= training_data_period - 1
+    if array.size(volatility_array) < training_data_period
+        array.unshift(volatility_array, volatility)
+    else
+        array.pop(volatility_array)
+        array.unshift(volatility_array, volatility)
+
+    // Perform K-Means clustering once after training period:
+    // We initialize centroids at certain percentiles (highvol, midvol, lowvol).
+    // Then we run a limited number of iterations to assign each volatility data point 
+    // to the closest centroid. After centroid convergence (or max_iterations), 
+    // we store the final centroids (hv_new, mv_new, lv_new) for classifying future bars.
+    
+    if not recalculated and array.size(volatility_array) >= training_data_period
+        hv_new := array.percentile_nearest_rank(volatility_array, highvol * 100)
+        mv_new := array.percentile_nearest_rank(volatility_array, midvol * 100)
+        lv_new := array.percentile_nearest_rank(volatility_array, lowvol * 100)
+
+        // ----- K-Means Clustering Logic with Limited Iterations -----
+        for iter = 0 to max_iterations - 1
+            // Initialize clusters
+            array.clear(hv)
+            array.clear(mv)
+            array.clear(lv)
+            for i = 0 to array.size(volatility_array) - 1
+                v = array.get(volatility_array, i)
+                dist_hv = math.abs(v - hv_new)
+                dist_mv = math.abs(v - mv_new)
+                dist_lv = math.abs(v - lv_new)
+                min_dist = math.min(dist_hv, dist_mv, dist_lv)
+                if min_dist == dist_hv
+                    array.push(hv, v)
+                else if min_dist == dist_mv
+                    array.push(mv, v)
+                else
+                    array.push(lv, v)
+            old_hv_new = hv_new
+            old_mv_new = mv_new
+            old_lv_new = lv_new
+            // Update centroids if clusters are not empty
+            if array.size(hv) > 0
+                hv_new := array.avg(hv)
+            if array.size(mv) > 0
+                mv_new := array.avg(mv)
+            if array.size(lv) > 0
+                lv_new := array.avg(lv)
+            // Check convergence
+            if hv_new == old_hv_new and mv_new == old_mv_new and lv_new == old_lv_new
+                break
+        recalculated := true  // Clustering done once after training period
+
+    // ----- Calculate Distance to Centroids -----
+    if recalculated
+        vdist_hv = math.abs(volatility - hv_new)
+        vdist_mv = math.abs(volatility - mv_new)
+        vdist_lv = math.abs(volatility - lv_new)
+        min_dist = math.min(vdist_hv, vdist_mv, vdist_lv)
+        if min_dist == vdist_hv
+            cluster := 0  // High volatility
+        else if min_dist == vdist_mv
+            cluster := 1  // Medium volatility
+        else
+            cluster := 2  // Low volatility
+
+        // --- Update ATR Table after Clustering ---
+        hv_size := array.size(hv)
+        mv_size := array.size(mv)
+        lv_size := array.size(lv)
+
+        if not na(atr_table)
+            update_atr_table(hv_new, mv_new, lv_new, hv_size, mv_size, lv_size, current_atr)
+            highlight_cluster_row(atr_table, cluster)  // Encapsulated function for updating background
+
+// === 10. Tables and Labels ===
+
+// ----- Initialize Tables Once -----
+var table trades_table = table.new(position.bottom_right, 6, 6, bgcolor=color.new(color.gray, 95), frame_width=1, frame_color=color.gray)
+
+if bar_index == 0
+    // Setup Trades Table Headers
+    table.cell(trades_table, 0, 0, "Order ID", bgcolor=color.new(color.blue, 80), text_color=color.white, text_halign=text.align_center)
+    table.cell(trades_table, 0, 1, "Action", bgcolor=color.new(color.blue, 80), text_color=color.white, text_halign=text.align_center)
+    table.cell(trades_table, 0, 2, "Contracts", bgcolor=color.new(color.blue, 80), text_color=color.white, text_halign=text.align_center)
+    table.cell(trades_table, 0, 3, "Ticker", bgcolor=color.new(color.blue, 80), text_color=color.white, text_halign=text.align_center)
+    table.cell(trades_table, 0, 4, "Stop Level", bgcolor=color.new(color.blue, 80), text_color=color.white, text_halign=text.align_center)
+    table.cell(trades_table, 0, 5, "Profit Level", bgcolor=color.new(color.blue, 80), text_color=color.white, text_halign=text.align_center)
+
+    // Setup ATR Table Headers
+    table.cell(atr_table, 0, 0, "Cluster", text_halign=text.align_center, text_color=chart.fg_color)
+    table.cell(atr_table, 0, 1, "Centroid (ATR)", text_halign=text.align_center, text_color=chart.fg_color)
+    table.cell(atr_table, 0, 2, "Cluster Size", text_halign=text.align_center, text_color=chart.fg_color)
+    table.cell(atr_table, 0, 3, "Current ATR", text_halign=text.align_center, text_color=chart.fg_color)
+
+    table.cell(atr_table, 1, 0, "3 (High)", text_halign=text.align_center, text_color=chart.fg_color)
+    table.cell(atr_table, 2, 0, "2 (Medium)", text_halign=text.align_center, text_color=chart.fg_color)
+    table.cell(atr_table, 3, 0, "1 (Low)", text_halign=text.align_center, text_color=chart.fg_color)
+
+// ----- Update Trades Table Data -----
+if strategy.position_size != 0
+    action = strategy.position_size > 0 ? "Long" : "Short"
+    color_bg = strategy.position_size > 0 ? color.new(color.green, 90) : color.new(color.red, 90)
+    stop_level = strategy.position_size > 0 ? long_sl_price : short_sl_price
+    profit_level = strategy.position_size > 0 ? long_tp_price : short_tp_price
+
+    table.cell(trades_table, 1, 0, strategy.position_size > 0 ? uuid_long : uuid_short, bgcolor=color_bg, text_color=color.white)
+    table.cell(trades_table, 1, 1, action, bgcolor=color_bg, text_color=color.white)
+    table.cell(trades_table, 1, 2, str.tostring(position_size), bgcolor=color.new(color.blue, 90), text_color=color.white)
+    table.cell(trades_table, 1, 3, syminfo.ticker, bgcolor=color.new(color.gray, 80), text_color=color.white)
+    table.cell(trades_table, 1, 4, str.tostring(stop_level), bgcolor=color.new(color.orange, 90), text_color=color.white)
+    table.cell(trades_table, 1, 5, str.tostring(profit_level), bgcolor=color.new(color.green, 90), text_color=color.white)
+
+// ----- Debugging Labels -----
+if Enable_Debugging
+    label.new(bar_index, high, "HV: " + str.tostring(hv_new), color=color.orange, textcolor=color.white)
+    label.new(bar_index, high - 1, "MV: " + str.tostring(mv_new), color=color.yellow, textcolor=color.white)
+    label.new(bar_index, high - 2, "LV: " + str.tostring(lv_new), color=color.red, textcolor=color.white)
+
+// Plot ATR for verification when debugging is enabled
+plot(Enable_Debugging ? volatility : na, title="ATR", color=color.blue)
+
+// Alerts for Regime Changes
+if Enable_Debugging and market_regime != prev_regime
+    alert("Market Regime changed to: " + market_regime)
+
+// === 11. Alerts ===
+
+// ----- Trend Change Alerts -----
+alertcondition(ta.crossunder(dir, 0) and barstate.isconfirmed, "Bullish Trend Shift", "Price crossed under the SuperTrend.")
+alertcondition(ta.crossover(dir, 0) and barstate.isconfirmed, "Bearish Trend Shift", "Price crossed over the SuperTrend.")
+alertcondition(cluster == 0 and cluster[1] != 0 and barstate.isconfirmed, "High Volatility", "Cluster identified as High Volatility.")
+alertcondition(cluster == 1 and cluster[1] != 1 and barstate.isconfirmed, "Medium Volatility", "Cluster identified as Medium Volatility.")
+alertcondition(cluster == 2 and cluster[1] != 2 and barstate.isconfirmed, "Low Volatility", "Cluster identified as Low Volatility.")

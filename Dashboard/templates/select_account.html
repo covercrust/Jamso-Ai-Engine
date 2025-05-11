@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Account</title>
+</head>
+<body>
+    <h1>Select Trading Account</h1>
+    <form method="POST" action="{{ url_for('select_account') }}">
+        <input type="hidden" name="server" value="{{ server }}">
+        {% for account in accounts %}
+        <label>
+            <input type="radio" name="account_id" value="{{ account['accountId'] }}" required>
+            {{ account['accountName'] }} ({{ account['currency'] }}, Balance: {{ account['balance']['balance'] }})
+        </label><br>
+        {% endfor %}
+        <button type="submit">Select Account</button>
+    </form>
+</body>
+</html>

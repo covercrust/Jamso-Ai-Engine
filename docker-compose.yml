@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=development
+      - SECRET_KEY=your_secret_key
+      - DASHBOARD_API_KEY=your_dashboard_api_key
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: jamso
+      POSTGRES_PASSWORD: jamso_password
+      POSTGRES_DB: jamso_ai
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:

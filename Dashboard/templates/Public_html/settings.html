@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title }}</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"
+    />
+    <style>
+      .sidebar {
+        min-height: 100vh;
+        background-color: #4e73df;
+        background-image: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        background-size: cover;
+      }
+      .sidebar-brand {
+        padding: 1.5rem 1rem;
+        text-align: center;
+        color: white;
+        font-weight: 800;
+        font-size: 1.2rem;
+      }
+      .sidebar-item {
+        padding: 0.8rem 1rem;
+        color: rgba(255, 255, 255, 0.8);
+        transition: all 0.2s;
+      }
+      .sidebar-item:hover,
+      .sidebar-item.active {
+        color: white;
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      .sidebar-item i {
+        margin-right: 0.5rem;
+        width: 1.2rem;
+        text-align: center;
+      }
+      .content-wrapper {
+        min-height: 100vh;
+        background-color: #f8f9fc;
+      }
+      .navbar {
+        background-color: white;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+      }
+      .card {
+        margin-bottom: 1.5rem;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+      }
+      .card-header {
+        background-color: #f8f9fc;
+        border-bottom: 1px solid #e3e6f0;
+        font-weight: bold;
+      }
+      footer {
+        background-color: white;
+        border-top: 1px solid #e3e6f0;
+      }
+      .settings-icon {
+        font-size: 2.5rem;
+        color: #4e73df;
+        margin-bottom: 1rem;
+      }
+      .nav-tabs .nav-link {
+        border: none;
+        color: #5a5c69;
+        font-weight: 500;
+      }
+      .nav-tabs .nav-link.active {
+        color: #4e73df;
+        border-bottom: 2px solid #4e73df;
+      }
+      .nav-tabs {
+        border-bottom: 1px solid #e3e6f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid p-0">
+      <div class="row g-0">
+        <!-- Sidebar -->
+        <div class="col-lg-2 sidebar">
+          <div class="sidebar-brand">
+            <i class="fa fa-robot"></i> Jamso AI Bot
+          </div>
+          <hr class="bg-white" />
+          <a
+            href="/dashboard/"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-dashboard"></i> Dashboard
+          </a>
+          <a
+            href="/dashboard/trades"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-exchange"></i> Trades
+          </a>
+          <a
+            href="/dashboard/signals"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-bell"></i> Signals
+          </a>
+          <a
+            href="/dashboard/analytics"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-chart-line"></i> Analytics
+          </a>
+          <hr class="bg-white" />
+          <a
+            href="/dashboard/settings"
+            class="d-block text-decoration-none sidebar-item active"
+          >
+            <i class="fa fa-gear"></i> Settings
+          </a>
+          <a
+            href="/dashboard/auth/logout"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-sign-out"></i> Logout
+          </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-10 content-wrapper">
+          <!-- Navbar -->
+          <nav class="navbar navbar-expand navbar-light p-3">
+            <div class="container-fluid">
+              <div>
+                <h1 class="h3 mb-0 text-gray-800">Settings</h1>
+              </div>
+              <div class="ms-auto">
+                <span class="me-2">Welcome, {{ username }}</span>
+              </div>
+            </div>
+          </nav>
+
+          <!-- Page Content -->
+          <div class="container-fluid p-4">
+            <!-- Settings Navigation Tabs -->
+            <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link active"
+                  id="profile-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#profile"
+                  type="button"
+                  role="tab"
+                  aria-controls="profile"
+                  aria-selected="true"
+                >
+                  <i class="fa fa-user me-2"></i>Profile
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  id="trading-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#trading"
+                  type="button"
+                  role="tab"
+                  aria-controls="trading"
+                  aria-selected="false"
+                >
+                  <i class="fa fa-line-chart me-2"></i>Trading
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  id="notifications-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#notifications"
+                  type="button"
+                  role="tab"
+                  aria-controls="notifications"
+                  aria-selected="false"
+                >
+                  <i class="fa fa-bell me-2"></i>Notifications
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  id="api-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#api"
+                  type="button"
+                  role="tab"
+                  aria-controls="api"
+                  aria-selected="false"
+                >
+                  <i class="fa fa-key me-2"></i>API Keys
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  id="system-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#system"
+                  type="button"
+                  role="tab"
+                  aria-controls="system"
+                  aria-selected="false"
+                >
+                  <i class="fa fa-server me-2"></i>System
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  id="credentials-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#credentials"
+                  type="button"
+                  role="tab"
+                  aria-controls="credentials"
+                  aria-selected="false"
+                >
+                  <i class="fa fa-key me-2"></i>Credentials
+                </button>
+              </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="settingsTabContent">
+              <!-- Profile Settings -->
+              <div
+                class="tab-pane fade show active"
+                id="profile"
+                role="tabpanel"
+                aria-labelledby="profile-tab"
+              >
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">User Profile</h6>
+                  </div>
+                  <div class="card-body">
+                    <form>
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <label for="username" class="form-label"
+                            >Username</label
+                          >
+                          <input
+                            type="text"
+                            class="form-control"
+                            id="username"
+                            value="{{ user.username }}"
+                            disabled
+                          />
+                          <div class="form-text">
+                            Username cannot be changed.
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <label for="email" class="form-label"
+                            >Email address</label
+                          >
+                          <input
+                            type="email"
+                            class="form-control"
+                            id="email"
+                            value="{{ user.email }}"
+                          />
+                        </div>
+                      </div>
+
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <label for="first_name" class="form-label"
+                            >First Name</label
+                          >
+                          <input
+                            type="text"
+                            class="form-control"
+                            id="first_name"
+                            value="{{ user.first_name }}"
+                          />
+                        </div>
+                        <div class="col-md-6">
+                          <label for="last_name" class="form-label"
+                            >Last Name</label
+                          >
+                          <input
+                            type="text"
+                            class="form-control"
+                            id="last_name"
+                            value="{{ user.last_name }}"
+                          />
+                        </div>
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Change Password</h5>
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <label for="current_password" class="form-label"
+                            >Current Password</label
+                          >
+                          <input
+                            type="password"
+                            class="form-control"
+                            id="current_password"
+                          />
+                        </div>
+                      </div>
+
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <label for="new_password" class="form-label"
+                            >New Password</label
+                          >
+                          <input
+                            type="password"
+                            class="form-control"
+                            id="new_password"
+                          />
+                        </div>
+                        <div class="col-md-6">
+                          <label for="confirm_password" class="form-label"
+                            >Confirm New Password</label
+                          >
+                          <input
+                            type="password"
+                            class="form-control"
+                            id="confirm_password"
+                          />
+                        </div>
+                      </div>
+
+                      <button type="submit" class="btn btn-primary">
+                        Save Changes
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Trading Settings -->
+              <div
+                class="tab-pane fade"
+                id="trading"
+                role="tabpanel"
+                aria-labelledby="trading-tab"
+              >
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">Trading Parameters</h6>
+                  </div>
+                  <div class="card-body">
+                    <form>
+                      <h5 class="mb-3">Risk Management</h5>
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <label for="risk_per_trade" class="form-label"
+                            >Risk Per Trade (%)</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="risk_per_trade"
+                            min="0.1"
+                            max="10"
+                            step="0.1"
+                            value="1"
+                          />
+                          <div class="form-text">
+                            Percentage of account balance to risk per trade.
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <label for="max_daily_loss" class="form-label"
+                            >Max Daily Loss (%)</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="max_daily_loss"
+                            min="1"
+                            max="20"
+                            step="0.5"
+                            value="5"
+                          />
+                          <div class="form-text">
+                            Trading will stop if daily loss exceeds this value.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="row mb-3">
+                        <div class="col-md-4">
+                          <label for="max_open_positions" class="form-label"
+                            >Max Open Positions</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="max_open_positions"
+                            min="1"
+                            max="20"
+                            value="5"
+                          />
+                        </div>
+                        <div class="col-md-4">
+                          <label for="auto_close_positions" class="form-label"
+                            >Auto-Close After (hours)</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="auto_close_positions"
+                            min="1"
+                            max="72"
+                            value="24"
+                          />
+                          <div class="form-text">
+                            Set to 0 to disable auto-closing.
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <label for="max_drawdown" class="form-label"
+                            >Max Drawdown (%)</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="max_drawdown"
+                            min="5"
+                            max="50"
+                            step="1"
+                            value="20"
+                          />
+                          <div class="form-text">
+                            Trading stops if drawdown exceeds this threshold.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="row mb-3">
+                        <div class="col-md-4">
+                          <label for="max_trades_per_day" class="form-label"
+                            >Max Trades Per Day</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="max_trades_per_day"
+                            min="1"
+                            max="50"
+                            value="10"
+                          />
+                        </div>
+                        <div class="col-md-4">
+                          <label for="max_exposure_per_asset" class="form-label"
+                            >Max Exposure Per Asset (%)</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="max_exposure_per_asset"
+                            min="1"
+                            max="50"
+                            step="1"
+                            value="10"
+                          />
+                        </div>
+                        <div class="col-md-4">
+                          <label for="consecutive_losses" class="form-label"
+                            >Max Consecutive Losses</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="consecutive_losses"
+                            min="1"
+                            max="10"
+                            value="3"
+                          />
+                          <div class="form-text">
+                            Pause trading after this many consecutive losses.
+                          </div>
+                        </div>
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Default Trade Parameters</h5>
+                      <div class="row mb-3">
+                        <div class="col-md-4">
+                          <label for="default_stop_loss" class="form-label"
+                            >Default Stop Loss (pips)</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="default_stop_loss"
+                            min="5"
+                            max="200"
+                            value="30"
+                          />
+                        </div>
+                        <div class="col-md-4">
+                          <label for="default_take_profit" class="form-label"
+                            >Default Take Profit (pips)</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="default_take_profit"
+                            min="10"
+                            max="500"
+                            value="60"
+                          />
+                        </div>
+                        <div class="col-md-4">
+                          <label for="risk_reward_ratio" class="form-label"
+                            >Target Risk/Reward Ratio</label
+                          >
+                          <select class="form-select" id="risk_reward_ratio">
+                            <option value="1">1:1</option>
+                            <option value="1.5">1:1.5</option>
+                            <option value="2" selected>1:2</option>
+                            <option value="3">1:3</option>
+                            <option value="custom">Custom</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Stop Loss Settings</h5>
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <div class="mb-3 form-check">
+                            <input
+                              type="checkbox"
+                              class="form-check-input"
+                              id="guaranteed_stop"
+                            />
+                            <label
+                              class="form-check-label"
+                              for="guaranteed_stop"
+                              >Enable Guaranteed Stop Loss (GSLO)</label
+                            >
+                            <div class="form-text">
+                              Note: Additional fees may apply for guaranteed
+                              stops
+                            </div>
+                          </div>
+
+                          <div class="mb-3 form-check">
+                            <input
+                              type="checkbox"
+                              class="form-check-input"
+                              id="trailing_stop"
+                              checked
+                            />
+                            <label class="form-check-label" for="trailing_stop"
+                              >Enable Trailing Stop</label
+                            >
+                          </div>
+                        </div>
+
+                        <div class="col-md-6">
+                          <label for="trailing_stop_distance" class="form-label"
+                            >Trailing Stop Distance (pips)</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="trailing_stop_distance"
+                            min="5"
+                            max="100"
+                            value="20"
+                          />
+
+                          <div class="mt-3">
+                            <label
+                              for="trailing_stop_activation"
+                              class="form-label"
+                              >Trailing Stop Activation</label
+                            >
+                            <div class="input-group">
+                              <input
+                                type="number"
+                                class="form-control"
+                                id="trailing_stop_activation"
+                                min="5"
+                                max="100"
+                                value="15"
+                              />
+                              <span class="input-group-text"
+                                >pips in profit</span
+                              >
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Position Management</h5>
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <div class="mb-3 form-check">
+                            <input
+                              type="checkbox"
+                              class="form-check-input"
+                              id="scale_in"
+                            />
+                            <label class="form-check-label" for="scale_in"
+                              >Enable Position Scaling</label
+                            >
+                          </div>
+
+                          <div class="mb-3">
+                            <label for="scale_in_method" class="form-label"
+                              >Scaling Method</label
+                            >
+                            <select class="form-select" id="scale_in_method">
+                              <option value="fixed">Fixed Lots</option>
+                              <option value="martingale">Martingale</option>
+                              <option value="anti_martingale">
+                                Anti-Martingale
+                              </option>
+                              <option value="fibonacci">
+                                Fibonacci Sequence
+                              </option>
+                            </select>
+                          </div>
+
+                          <div class="mb-3">
+                            <label for="scale_in_levels" class="form-label"
+                              >Number of Scaling Levels</label
+                            >
+                            <input
+                              type="number"
+                              class="form-control"
+                              id="scale_in_levels"
+                              min="1"
+                              max="5"
+                              value="3"
+                            />
+                          </div>
+                        </div>
+
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="partial_take_profit" class="form-label"
+                              >Partial Profit Taking</label
+                            >
+                            <select
+                              class="form-select"
+                              id="partial_take_profit"
+                            >
+                              <option value="none">Disabled</option>
+                              <option value="fixed" selected>
+                                Fixed Percentages
+                              </option>
+                              <option value="dynamic">
+                                Dynamic (Based on Volatility)
+                              </option>
+                            </select>
+                          </div>
+
+                          <div class="mb-3">
+                            <label class="form-label"
+                              >Partial TP Levels (% of position)</label
+                            >
+                            <div class="input-group mb-2">
+                              <span class="input-group-text">Level 1</span>
+                              <input
+                                type="number"
+                                class="form-control"
+                                min="10"
+                                max="90"
+                                value="33"
+                              />
+                              <span class="input-group-text">%</span>
+                            </div>
+                            <div class="input-group mb-2">
+                              <span class="input-group-text">Level 2</span>
+                              <input
+                                type="number"
+                                class="form-control"
+                                min="10"
+                                max="90"
+                                value="50"
+                              />
+                              <span class="input-group-text">%</span>
+                            </div>
+                            <div class="input-group">
+                              <span class="input-group-text">Level 3</span>
+                              <input
+                                type="number"
+                                class="form-control"
+                                min="10"
+                                max="100"
+                                value="100"
+                              />
+                              <span class="input-group-text">%</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Trading Hours</h5>
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <div class="mb-3 form-check">
+                            <input
+                              type="checkbox"
+                              class="form-check-input"
+                              id="restrict_trading_hours"
+                            />
+                            <label
+                              class="form-check-label"
+                              for="restrict_trading_hours"
+                              >Restrict Trading Hours</label
+                            >
+                          </div>
+
+                          <div class="row">
+                            <div class="col-6">
+                              <label for="trading_start_time" class="form-label"
+                                >Start Time</label
+                              >
+                              <input
+                                type="time"
+                                class="form-control"
+                                id="trading_start_time"
+                                value="09:00"
+                              />
+                            </div>
+                            <div class="col-6">
+                              <label for="trading_end_time" class="form-label"
+                                >End Time</label
+                              >
+                              <input
+                                type="time"
+                                class="form-control"
+                                id="trading_end_time"
+                                value="17:30"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="col-md-6">
+                          <label class="form-label">Trading Days</label>
+                          <div class="mb-2">
+                            <div class="form-check form-check-inline">
+                              <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="day_monday"
+                                checked
+                              />
+                              <label class="form-check-label" for="day_monday"
+                                >Monday</label
+                              >
+                            </div>
+                            <div class="form-check form-check-inline">
+                              <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="day_tuesday"
+                                checked
+                              />
+                              <label class="form-check-label" for="day_tuesday"
+                                >Tuesday</label
+                              >
+                            </div>
+                            <div class="form-check form-check-inline">
+                              <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="day_wednesday"
+                                checked
+                              />
+                              <label
+                                class="form-check-label"
+                                for="day_wednesday"
+                                >Wednesday</label
+                              >
+                            </div>
+                          </div>
+                          <div>
+                            <div class="form-check form-check-inline">
+                              <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="day_thursday"
+                                checked
+                              />
+                              <label class="form-check-label" for="day_thursday"
+                                >Thursday</label
+                              >
+                            </div>
+                            <div class="form-check form-check-inline">
+                              <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="day_friday"
+                                checked
+                              />
+                              <label class="form-check-label" for="day_friday"
+                                >Friday</label
+                              >
+                            </div>
+                            <div class="form-check form-check-inline">
+                              <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="day_weekend"
+                              />
+                              <label class="form-check-label" for="day_weekend"
+                                >Weekend</label
+                              >
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Advanced Options</h5>
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <div class="mb-3 form-check">
+                            <input
+                              type="checkbox"
+                              class="form-check-input"
+                              id="news_filter"
+                              checked
+                            />
+                            <label class="form-check-label" for="news_filter"
+                              >Avoid Trading During High-Impact News</label
+                            >
+                          </div>
+
+                          <div class="mb-3 form-check">
+                            <input
+                              type="checkbox"
+                              class="form-check-input"
+                              id="hedge_positions"
+                            />
+                            <label
+                              class="form-check-label"
+                              for="hedge_positions"
+                              >Allow Position Hedging</label
+                            >
+                          </div>
+
+                          <div class="mb-3 form-check">
+                            <input
+                              type="checkbox"
+                              class="form-check-input"
+                              id="martingale_recovery"
+                            />
+                            <label
+                              class="form-check-label"
+                              for="martingale_recovery"
+                              >Enable Martingale Recovery</label
+                            >
+                          </div>
+                        </div>
+
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label for="trade_size_method" class="form-label"
+                              >Position Sizing Method</label
+                            >
+                            <select class="form-select" id="trade_size_method">
+                              <option value="fixed">Fixed Amount</option>
+                              <option value="risk_percent" selected>
+                                Risk Percentage
+                              </option>
+                              <option value="atr_based">ATR-Based</option>
+                              <option value="equity_percent">
+                                Equity Percentage
+                              </option>
+                              <option value="volatility_based">
+                                Volatility-Based
+                              </option>
+                            </select>
+                          </div>
+
+                          <div class="mb-3">
+                            <label for="slippage_tolerance" class="form-label"
+                              >Max Slippage Tolerance (pips)</label
+                            >
+                            <input
+                              type="number"
+                              class="form-control"
+                              id="slippage_tolerance"
+                              min="0"
+                              max="10"
+                              step="0.1"
+                              value="2"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Instrument-Specific Settings</h5>
+                      <div class="mb-3">
+                        <div
+                          class="d-flex justify-content-between align-items-center mb-2"
+                        >
+                          <label class="form-label mb-0"
+                            >Instrument Settings</label
+                          >
+                          <button
+                            type="button"
+                            class="btn btn-sm btn-outline-primary"
+                          >
+                            <i class="fa fa-plus me-1"></i> Add Instrument
+                          </button>
+                        </div>
+
+                        <div class="table-responsive">
+                          <table class="table table-bordered table-hover">
+                            <thead>
+                              <tr>
+                                <th>Instrument</th>
+                                <th>Risk %</th>
+                                <th>Stop Loss</th>
+                                <th>Take Profit</th>
+                                <th>Trading Enabled</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>EUR/USD</td>
+                                <td>1%</td>
+                                <td>20 pips</td>
+                                <td>40 pips</td>
+                                <td>
+                                  <span class="badge bg-success">Enabled</span>
+                                </td>
+                                <td>
+                                  <button
+                                    class="btn btn-sm btn-outline-primary"
+                                  >
+                                    Edit
+                                  </button>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>GBP/USD</td>
+                                <td>0.8%</td>
+                                <td>25 pips</td>
+                                <td>50 pips</td>
+                                <td>
+                                  <span class="badge bg-success">Enabled</span>
+                                </td>
+                                <td>
+                                  <button
+                                    class="btn btn-sm btn-outline-primary"
+                                  >
+                                    Edit
+                                  </button>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>XAUUSD (Gold)</td>
+                                <td>0.5%</td>
+                                <td>$3.50</td>
+                                <td>$7.00</td>
+                                <td>
+                                  <span class="badge bg-danger">Disabled</span>
+                                </td>
+                                <td>
+                                  <button
+                                    class="btn btn-sm btn-outline-primary"
+                                  >
+                                    Edit
+                                  </button>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <button type="submit" class="btn btn-primary mt-3">
+                        Save Trading Settings
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notifications Settings -->
+              <div
+                class="tab-pane fade"
+                id="notifications"
+                role="tabpanel"
+                aria-labelledby="notifications-tab"
+              >
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">Notification Settings</h6>
+                  </div>
+                  <div class="card-body">
+                    <form>
+                      <h5 class="mb-3">Email Notifications</h5>
+                      <div class="mb-3 form-check">
+                        <input
+                          type="checkbox"
+                          class="form-check-input"
+                          id="notify_trade_executed"
+                          checked
+                        />
+                        <label
+                          class="form-check-label"
+                          for="notify_trade_executed"
+                          >When a trade is executed</label
+                        >
+                      </div>
+
+                      <div class="mb-3 form-check">
+                        <input
+                          type="checkbox"
+                          class="form-check-input"
+                          id="notify_trade_closed"
+                          checked
+                        />
+                        <label
+                          class="form-check-label"
+                          for="notify_trade_closed"
+                          >When a trade is closed</label
+                        >
+                      </div>
+
+                      <div class="mb-3 form-check">
+                        <input
+                          type="checkbox"
+                          class="form-check-input"
+                          id="notify_daily_summary"
+                          checked
+                        />
+                        <label
+                          class="form-check-label"
+                          for="notify_daily_summary"
+                          >Daily trading summary</label
+                        >
+                      </div>
+
+                      <div class="mb-3 form-check">
+                        <input
+                          type="checkbox"
+                          class="form-check-input"
+                          id="notify_system_errors"
+                        />
+                        <label
+                          class="form-check-label"
+                          for="notify_system_errors"
+                          >System errors and warnings</label
+                        >
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Telegram Notifications</h5>
+                      <div class="mb-3 form-check">
+                        <input
+                          type="checkbox"
+                          class="form-check-input"
+                          id="telegram_enabled"
+                        />
+                        <label class="form-check-label" for="telegram_enabled"
+                          >Enable Telegram notifications</label
+                        >
+                      </div>
+
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <label for="telegram_token" class="form-label"
+                            >Telegram Bot Token</label
+                          >
+                          <input
+                            type="text"
+                            class="form-control"
+                            id="telegram_token"
+                          />
+                        </div>
+                        <div class="col-md-6">
+                          <label for="telegram_chat_id" class="form-label"
+                            >Telegram Chat ID</label
+                          >
+                          <input
+                            type="text"
+                            class="form-control"
+                            id="telegram_chat_id"
+                          />
+                        </div>
+                      </div>
+
+                      <button type="submit" class="btn btn-primary">
+                        Save Notification Settings
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- API Keys Settings -->
+              <div
+                class="tab-pane fade"
+                id="api"
+                role="tabpanel"
+                aria-labelledby="api-tab"
+              >
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">API Configuration</h6>
+                  </div>
+                  <div class="card-body">
+                    <form>
+                      <div class="alert alert-warning">
+                        <i class="fa fa-warning me-2"></i> API credentials are
+                        sensitive information. Never share them with anyone.
+                      </div>
+
+                      <h5 class="mb-3">Capital.com API Details</h5>
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <label for="capital_api_key" class="form-label"
+                            >API Key</label
+                          >
+                          <div class="input-group">
+                            <input
+                              type="password"
+                              class="form-control"
+                              id="capital_api_key"
+                              value="{{ api_keys.capital_key }}"
+                            />
+                            <button
+                              class="btn btn-outline-secondary"
+                              type="button"
+                              onclick="togglePassword('capital_api_key')"
+                            >
+                              <i class="fa fa-eye"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <label for="capital_api_secret" class="form-label"
+                            >API Secret</label
+                          >
+                          <div class="input-group">
+                            <input
+                              type="password"
+                              class="form-control"
+                              id="capital_api_secret"
+                              value="{{ api_keys.capital_secret }}"
+                            />
+                            <button
+                              class="btn btn-outline-secondary"
+                              type="button"
+                              onclick="togglePassword('capital_api_secret')"
+                            >
+                              <i class="fa fa-eye"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <label for="capital_api_demo" class="form-label"
+                            >Account Type</label
+                          >
+                          <select class="form-select" id="capital_api_demo">
+                            <option
+                              value="true"
+                              {%
+                              if
+                              api_keys.capital_demo
+                              %}selected{%
+                              endif
+                              %}
+                            >
+                              Demo Account
+                            </option>
+                            <option
+                              value="false"
+                              {%
+                              if
+                              not
+                              api_keys.capital_demo
+                              %}selected{%
+                              endif
+                              %}
+                            >
+                              Live Account
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div class="mb-4">
+                        <button
+                          type="button"
+                          class="btn btn-outline-primary"
+                          onclick="testConnection()"
+                        >
+                          <i class="fa fa-refresh me-2"></i> Test Connection
+                        </button>
+                        <span id="connection_status" class="ms-3"></span>
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Webhook API Access</h5>
+                      <div class="row mb-4">
+                        <div class="col-md-8">
+                          <label for="webhook_api_key" class="form-label"
+                            >Webhook API Key</label
+                          >
+                          <div class="input-group">
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="webhook_api_key"
+                              value="{{ api_keys.webhook_key }}"
+                              readonly
+                            />
+                            <button
+                              class="btn btn-outline-secondary"
+                              type="button"
+                              onclick="copyToClipboard('webhook_api_key')"
+                            >
+                              <i class="fa fa-copy"></i>
+                            </button>
+                            <button
+                              class="btn btn-outline-secondary"
+                              type="button"
+                              onclick="regenerateKey()"
+                            >
+                              <i class="fa fa-refresh"></i> Regenerate
+                            </button>
+                          </div>
+                          <div class="form-text">
+                            This key is required to authenticate webhook calls
+                            from TradingView.
+                          </div>
+                        </div>
+                      </div>
+
+                      <button type="submit" class="btn btn-primary">
+                        Save API Settings
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- System Settings -->
+              <div
+                class="tab-pane fade"
+                id="system"
+                role="tabpanel"
+                aria-labelledby="system-tab"
+              >
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">System Configuration</h6>
+                  </div>
+                  <div class="card-body">
+                    <form>
+                      <h5 class="mb-3">Logging</h5>
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <label for="log_level" class="form-label"
+                            >Log Level</label
+                          >
+                          <select class="form-select" id="log_level">
+                            <option value="DEBUG">Debug</option>
+                            <option value="INFO" selected>Info</option>
+                            <option value="WARNING">Warning</option>
+                            <option value="ERROR">Error</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div class="mb-3 form-check">
+                        <input
+                          type="checkbox"
+                          class="form-check-input"
+                          id="log_to_file"
+                          checked
+                        />
+                        <label class="form-check-label" for="log_to_file"
+                          >Log to file</label
+                        >
+                      </div>
+
+                      <div class="row mb-4">
+                        <div class="col-md-6">
+                          <label for="log_retention_days" class="form-label"
+                            >Log Retention (days)</label
+                          >
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="log_retention_days"
+                            min="1"
+                            max="365"
+                            value="30"
+                          />
+                        </div>
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Database</h5>
+                      <div class="mb-3">
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary me-2"
+                        >
+                          <i class="fa fa-database me-2"></i> Backup Database
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary me-2"
+                        >
+                          <i class="fa fa-upload me-2"></i> Restore Database
+                        </button>
+                      </div>
+
+                      <h5 class="mt-4 mb-3">Server Control</h5>
+                      <div class="mb-3">
+                        <button
+                          type="button"
+                          class="btn btn-outline-primary me-2"
+                          id="restartServerBtn"
+                          onclick="restartServer()"
+                        >
+                          <i class="fa fa-refresh me-2"></i> Restart Webhook
+                          Server
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-outline-danger me-2"
+                          id="stopServerBtn"
+                          onclick="stopServer()"
+                        >
+                          <i class="fa fa-power-off me-2"></i> Stop All Trading
+                        </button>
+                        <span id="serverControlStatus"></span>
+                      </div>
+
+                      <button type="submit" class="btn btn-primary mt-2">
+                        Save System Settings
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Credential Management -->
+              <div
+                class="tab-pane fade"
+                id="credentials"
+                role="tabpanel"
+                aria-labelledby="credentials-tab"
+              >
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">Manage Credentials</h6>
+                  </div>
+                  <div class="card-body">
+                    <form id="add-credential-form">
+                      <div class="mb-3">
+                        <label for="service_name" class="form-label">Service Name</label>
+                        <input type="text" class="form-control" id="service_name" required />
+                      </div>
+                      <div class="mb-3">
+                        <label for="api_key" class="form-label">API Key</label>
+                        <input type="text" class="form-control" id="api_key" required />
+                      </div>
+                      <div class="mb-3">
+                        <label for="encrypted_secret" class="form-label">Encrypted Secret</label>
+                        <input type="text" class="form-control" id="encrypted_secret" required />
+                      </div>
+                      <button type="submit" class="btn btn-primary">Add Credential</button>
+                    </form>
+
+                    <hr />
+
+                    <h6 class="mt-4">Existing Credentials</h6>
+                    <table class="table table-striped">
+                      <thead>
+                        <tr>
+                          <th>Service Name</th>
+                          <th>Created At</th>
+                          <th>Updated At</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="credentials-table">
+                        <!-- Dynamic rows will be added here -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <footer class="py-4 mt-auto">
+            <div class="container-fluid">
+              <div class="text-center">
+                <span>Jamso AI Trading Bot &copy; 2025</span>
+              </div>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      function togglePassword(elementId) {
+        const input = document.getElementById(elementId);
+        if (input.type === "password") {
+          input.type = "text";
+        } else {
+          input.type = "password";
+        }
+      }
+
+      function copyToClipboard(elementId) {
+        const input = document.getElementById(elementId);
+        input.select();
+        document.execCommand("copy");
+        alert("Copied to clipboard!");
+      }
+
+      function testConnection() {
+        const statusEl = document.getElementById("connection_status");
+        statusEl.innerHTML =
+          '<span class="text-warning"><i class="fa fa-spinner fa-spin me-1"></i> Testing connection...</span>';
+
+        // Simulate API connection test
+        setTimeout(() => {
+          statusEl.innerHTML =
+            '<span class="text-success"><i class="fa fa-check-circle me-1"></i> Connection successful!</span>';
+        }, 1500);
+      }
+
+      function regenerateKey() {
+        if (
+          confirm(
+            "Are you sure you want to regenerate the API key? This will invalidate the existing key."
+          )
+        ) {
+          // Generate a random key (in a real app, this would be done server-side)
+          const randomKey =
+            "wh_" +
+            Math.random().toString(36).substring(2, 15) +
+            Math.random().toString(36).substring(2, 15);
+          document.getElementById("webhook_api_key").value = randomKey;
+        }
+      }
+
+      function restartServer() {
+        const statusEl = document.getElementById("serverControlStatus");
+        statusEl.innerHTML =
+          '<span class="text-warning"><i class="fa fa-spinner fa-spin me-1"></i> Restarting server...</span>';
+
+        // Call the API endpoint to restart the server
+        fetch('/dashboard/api/server/restart', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            if (data.dev_mode) {
+              // In development mode, show instructions to manually restart
+              statusEl.innerHTML =
+                '<span class="text-info"><i class="fa fa-info-circle me-1"></i> ' + data.message + '</span>';
+            } else {
+              // In production mode
+              statusEl.innerHTML =
+                '<span class="text-success"><i class="fa fa-check-circle me-1"></i> ' + data.message + '</span>';
+            }
+          } else {
+            statusEl.innerHTML =
+              '<span class="text-danger"><i class="fa fa-times-circle me-1"></i> ' + data.message + '</span>';
+          }
+        })
+        .catch(error => {
+          console.error('Error restarting server:', error);
+          statusEl.innerHTML =
+            '<span class="text-danger"><i class="fa fa-times-circle me-1"></i> Error restarting server</span>';
+        });
+      }
+
+      function stopServer() {
+        const statusEl = document.getElementById("serverControlStatus");
+        statusEl.innerHTML =
+          '<span class="text-warning"><i class="fa fa-spinner fa-spin me-1"></i> Stopping trading...</span>';
+
+        // Call the API endpoint to stop all trading
+        fetch('/dashboard/api/server/stop', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            statusEl.innerHTML =
+              '<span class="text-success"><i class="fa fa-check-circle me-1"></i> ' + data.message + '</span>';
+          } else {
+            statusEl.innerHTML =
+              '<span class="text-danger"><i class="fa fa-times-circle me-1"></i> ' + data.message + '</span>';
+          }
+        })
+        .catch(error => {
+          console.error('Error stopping trading:', error);
+          statusEl.innerHTML =
+            '<span class="text-danger"><i class="fa fa-times-circle me-1"></i> Error stopping trading</span>';
+        });
+      }
+    </script>
+  </body>
+</html>

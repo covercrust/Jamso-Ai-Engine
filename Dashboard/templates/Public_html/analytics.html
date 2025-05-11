@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title }}</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <style>
+      .sidebar {
+        min-height: 100vh;
+        background-color: #4e73df;
+        background-image: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        background-size: cover;
+      }
+      .sidebar-brand {
+        padding: 1.5rem 1rem;
+        text-align: center;
+        color: white;
+        font-weight: 800;
+        font-size: 1.2rem;
+      }
+      .sidebar-item {
+        padding: 0.8rem 1rem;
+        color: rgba(255, 255, 255, 0.8);
+        transition: all 0.2s;
+      }
+      .sidebar-item:hover,
+      .sidebar-item.active {
+        color: white;
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      .sidebar-item i {
+        margin-right: 0.5rem;
+        width: 1.2rem;
+        text-align: center;
+      }
+      .content-wrapper {
+        min-height: 100vh;
+        background-color: #f8f9fc;
+      }
+      .navbar {
+        background-color: white;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+      }
+      .card {
+        margin-bottom: 1.5rem;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+      }
+      .card-header {
+        background-color: #f8f9fc;
+        border-bottom: 1px solid #e3e6f0;
+        font-weight: bold;
+      }
+      .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 1rem;
+      }
+      footer {
+        background-color: white;
+        border-top: 1px solid #e3e6f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid p-0">
+      <div class="row g-0">
+        <!-- Sidebar -->
+        <div class="col-lg-2 sidebar">
+          <div class="sidebar-brand">
+            <i class="fa fa-robot"></i> Jamso AI Bot
+          </div>
+          <hr class="bg-white" />
+          <a
+            href="/dashboard/"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-dashboard"></i> Dashboard
+          </a>
+          <a
+            href="/dashboard/trades"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-exchange"></i> Trades
+          </a>
+          <a
+            href="/dashboard/signals"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-bell"></i> Signals
+          </a>
+          <a
+            href="/dashboard/analytics"
+            class="d-block text-decoration-none sidebar-item active"
+          >
+            <i class="fa fa-chart-line"></i> Analytics
+          </a>
+          <hr class="bg-white" />
+          <a
+            href="/dashboard/settings"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-gear"></i> Settings
+          </a>
+          <a
+            href="/dashboard/auth/logout"
+            class="d-block text-decoration-none sidebar-item"
+          >
+            <i class="fa fa-sign-out"></i> Logout
+          </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-10 content-wrapper">
+          <!-- Navbar -->
+          <nav class="navbar navbar-expand navbar-light p-3">
+            <div class="container-fluid">
+              <div>
+                <h1 class="h3 mb-0 text-gray-800">Analytics Dashboard</h1>
+              </div>
+              <div class="ms-auto">
+                <span class="me-2">Welcome, {{ username }}</span>
+              </div>
+            </div>
+          </nav>
+
+          <!-- Page Content -->
+          <div class="container-fluid p-4">
+            <!-- Date Range Selector -->
+            <div class="row mb-4">
+              <div class="col-md-12">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="row align-items-center">
+                      <div class="col-md-2">
+                        <label for="dateRangeSelect" class="form-label"
+                          >Date Range:</label
+                        >
+                      </div>
+                      <div class="col-md-4">
+                        <select id="dateRangeSelect" class="form-select">
+                          <option value="7">Last 7 Days</option>
+                          <option value="30" selected>Last 30 Days</option>
+                          <option value="90">Last 3 Months</option>
+                          <option value="180">Last 6 Months</option>
+                          <option value="365">Last 12 Months</option>
+                          <option value="custom">Custom Range</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <div
+                          class="input-group"
+                          id="customDateRange"
+                          style="display: none"
+                        >
+                          <input
+                            type="date"
+                            class="form-control"
+                            id="startDate"
+                          />
+                          <span class="input-group-text">to</span>
+                          <input
+                            type="date"
+                            class="form-control"
+                            id="endDate"
+                          />
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <button
+                          class="btn btn-primary w-100"
+                          id="updateAnalytics"
+                        >
+                          Update
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row">
+              <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary h-100 py-2">
+                  <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                      <div class="col mr-2">
+                        <div
+                          class="text-xs font-weight-bold text-primary text-uppercase mb-1"
+                        >
+                          Total Trades
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                          {{ performance.total_trades }}
+                        </div>
+                      </div>
+                      <div class="col-auto">
+                        <i class="fa fa-calendar fa-2x text-gray-300"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success h-100 py-2">
+                  <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                      <div class="col mr-2">
+                        <div
+                          class="text-xs font-weight-bold text-success text-uppercase mb-1"
+                        >
+                          Profit/Loss
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                          {{ performance.profit_loss }}
+                        </div>
+                      </div>
+                      <div class="col-auto">
+                        <i class="fa fa-dollar fa-2x text-gray-300"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-info h-100 py-2">
+                  <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                      <div class="col mr-2">
+                        <div
+                          class="text-xs font-weight-bold text-info text-uppercase mb-1"
+                        >
+                          Win Rate
+                        </div>
+                        <div class="row no-gutters align-items-center">
+                          <div class="col-auto">
+                            <div
+                              class="h5 mb-0 mr-3 font-weight-bold text-gray-800"
+                            >
+                              {{ performance.win_rate }}%
+                            </div>
+                          </div>
+                          <div class="col">
+                            <div class="progress progress-sm mr-2">
+                              <div
+                                class="progress-bar bg-info"
+                                role="progressbar"
+                                style="width: {{ performance.win_rate }}%"
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-auto">
+                        <i class="fa fa-trophy fa-2x text-gray-300"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-warning h-100 py-2">
+                  <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                      <div class="col mr-2">
+                        <div
+                          class="text-xs font-weight-bold text-warning text-uppercase mb-1"
+                        >
+                          Avg. Trade Duration
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                          {{ performance.avg_duration }}
+                        </div>
+                      </div>
+                      <div class="col-auto">
+                        <i class="fa fa-clock-o fa-2x text-gray-300"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Performance Charts -->
+            <div class="row">
+              <div class="col-xl-8 col-lg-7">
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">Profit/Loss Over Time</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="chart-container">
+                      <canvas id="profitLossChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-xl-4 col-lg-5">
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">Win/Loss Distribution</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="chart-container">
+                      <canvas id="winLossPieChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Additional Charts -->
+            <div class="row">
+              <div class="col-xl-6">
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">
+                      Trade Volume by Instrument
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="chart-container">
+                      <canvas id="instrumentChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-xl-6">
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">
+                      Daily Trade Performance
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="chart-container">
+                      <canvas id="dailyPerformanceChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <footer class="py-4 mt-auto">
+            <div class="container-fluid">
+              <div class="text-center">
+                <span>Jamso AI Trading Bot &copy; 2025</span>
+              </div>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Show/hide custom date range based on select value
+      document
+        .getElementById("dateRangeSelect")
+        .addEventListener("change", function () {
+          const customRange = document.getElementById("customDateRange");
+          if (this.value === "custom") {
+            customRange.style.display = "flex";
+          } else {
+            customRange.style.display = "none";
+          }
+        });
+
+      // Set default dates for custom range (last 30 days)
+      const today = new Date();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+
+      document.getElementById("startDate").valueAsDate = thirtyDaysAgo;
+      document.getElementById("endDate").valueAsDate = today;
+
+      // Sample data for charts
+      const dates = Array.from({ length: 30 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (29 - i));
+        return date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+      });
+
+      const profitLossData = Array.from(
+        { length: 30 },
+        () => Math.floor(Math.random() * 1000) - 400
+      );
+      const cumulativeProfitLoss = profitLossData.reduce((acc, curr, i) => {
+        const prev = i === 0 ? 10000 : acc[i - 1];
+        return [...acc, prev + curr];
+      }, []);
+
+      // Profit/Loss Chart
+      const profitLossCtx = document.getElementById("profitLossChart");
+      new Chart(profitLossCtx, {
+        type: "line",
+        data: {
+          labels: dates,
+          datasets: [
+            {
+              label: "Account Balance",
+              data: cumulativeProfitLoss,
+              borderColor: "rgba(78, 115, 223, 1)",
+              backgroundColor: "rgba(78, 115, 223, 0.05)",
+              pointRadius: 3,
+              pointBackgroundColor: "rgba(78, 115, 223, 1)",
+              pointBorderColor: "rgba(78, 115, 223, 1)",
+              pointHoverRadius: 3,
+              pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
+              pointHoverBorderColor: "rgba(78, 115, 223, 1)",
+              pointHitRadius: 10,
+              pointBorderWidth: 2,
+              fill: true,
+              tension: 0.1,
+            },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false,
+              },
+            },
+            y: {
+              ticks: {
+                callback: function (value) {
+                  return "$" + value;
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Win/Loss Pie Chart
+      const winLossCtx = document.getElementById("winLossPieChart");
+      new Chart(winLossCtx, {
+        type: "pie",
+        data: {
+          labels: ["Winning Trades", "Losing Trades"],
+          datasets: [
+            {
+              data: [65, 35],
+              backgroundColor: ["#1cc88a", "#e74a3b"],
+              hoverBackgroundColor: ["#169a6f", "#be3c30"],
+              hoverBorderColor: "rgba(234, 236, 244, 1)",
+            },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "bottom",
+            },
+          },
+        },
+      });
+
+      // Instrument Chart
+      const instrumentCtx = document.getElementById("instrumentChart");
+      new Chart(instrumentCtx, {
+        type: "bar",
+        data: {
+          labels: ["EURUSD", "GBPUSD", "US100", "GOLD", "OIL", "BTCUSD"],
+          datasets: [
+            {
+              label: "Number of Trades",
+              data: [42, 35, 28, 22, 15, 10],
+              backgroundColor: [
+                "rgba(78, 115, 223, 0.8)",
+                "rgba(28, 200, 138, 0.8)",
+                "rgba(54, 185, 204, 0.8)",
+                "rgba(246, 194, 62, 0.8)",
+                "rgba(231, 74, 59, 0.8)",
+                "rgba(133, 135, 150, 0.8)",
+              ],
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+
+      // Daily Performance
+      const dailyPerformanceCtx = document.getElementById(
+        "dailyPerformanceChart"
+      );
+      new Chart(dailyPerformanceCtx, {
+        type: "bar",
+        data: {
+          labels: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+          datasets: [
+            {
+              label: "Average Profit/Loss",
+              data: [250, -120, 380, 210, -50],
+              backgroundColor: function (context) {
+                const value = context.dataset.data[context.dataIndex];
+                return value >= 0
+                  ? "rgba(28, 200, 138, 0.8)"
+                  : "rgba(231, 74, 59, 0.8)";
+              },
+            },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              ticks: {
+                callback: function (value) {
+                  return "$" + value;
+                },
+              },
+            },
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
