@@ -11,7 +11,12 @@ from typing import Dict, Any, Tuple, Mapping
 
 # Configure paths using relative paths for better portability
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-sys.path.insert(0, ROOT_DIR)  # Add project root to path before imports
+# Fix import issue by adding the project root to the Python path
+PROJECT_ROOT = '/home/jamso-ai-server/Jamso-Ai-Engine'
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+# Now imports should work correctly  # Add project root to path before imports
 
 # Now we can import modules from the project based on the current structure
 from src.Exchanges.capital_com_api.session_manager import SessionManager

@@ -11,7 +11,12 @@ from typing import Dict, Any, Tuple, Optional
 
 # Add project root to Python path
 PROJECT_ROOT = '/home/jamso-ai-server/Jamso-Ai-Engine'
-sys.path.insert(0, PROJECT_ROOT)
+# Fix import issue by adding the project root to the Python path
+PROJECT_ROOT = '/home/jamso-ai-server/Jamso-Ai-Engine'
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+# Now imports should work correctly
 
 # Configure logging
 logger = logging.getLogger(__name__)

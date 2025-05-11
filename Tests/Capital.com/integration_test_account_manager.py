@@ -10,7 +10,12 @@ from typing import Dict, Any
 
 # Configure paths
 ROOT_DIR = '/home/jamso-ai-server/Jamso-Ai-Engine'
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+# Fix import issue by adding the project root to the Python path
+PROJECT_ROOT = '/home/jamso-ai-server/Jamso-Ai-Engine'
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+# Now imports should work correctly
 
 from src.Exchanges.capital_com_api.account_manager import AccountManager
 from src.Exchanges.capital_com_api.session_manager import SessionManager

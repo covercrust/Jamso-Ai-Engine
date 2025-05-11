@@ -111,6 +111,19 @@ All test files have been updated to use the new imports. If you add new tests, m
 from src.Webhook.app import flask_app
 ```
 
+## Running Tests
+
+When running tests, make sure the project root is in the Python path. All test files have been updated to include:
+
+```python
+# Fix import issue by adding the project root to the Python path
+PROJECT_ROOT = '/home/jamso-ai-server/Jamso-Ai-Engine'
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+```
+
+This ensures that imports from the `src` package work correctly. If you're creating new test files, be sure to include this code before importing any modules from the `src` package.
+
 ## Troubleshooting
 
 If you encounter issues with imports or file paths:
