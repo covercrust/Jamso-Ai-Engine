@@ -59,6 +59,7 @@ src/Credentials/active_account.json
 src/Credentials/env.sh
 src/Credentials/env.sh.BAK
 **/env.sh*
+!**/env.sh.template
 **/*.key
 **/*.pem
 **/*.env
