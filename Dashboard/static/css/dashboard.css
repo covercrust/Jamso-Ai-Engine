@@ -1,24 +1,31 @@
 /* 
  * Jamso AI Trading Bot - Dashboard Styles
- * Modern UI with light/dark theme support
+ * Enhancements:
+ * - Added detailed comments for better understanding.
+ * - Organized styles into sections for maintainability.
  */
 
 /* Base styling */
 :root {
-  --primary: #4e73df;
-  --success: #1cc88a;
-  --info: #36b9cc;
-  --warning: #f6c23e;
-  --danger: #e74a3b;
-  --secondary: #858796;
-  --light: #f8f9fc;
-  --dark: #5a5c69;
-  --body-bg: #f8f9fa;
-  --card-border: #e3e6f0;
-  --sidebar-bg: #f8f9fa;
-  --sidebar-active: #e9ecef;
-  --text-primary: #212529;
-  --text-muted: #6c757d;
+  /* Primary colors */
+  --primary: #4e73df; /* Main brand color */
+  --success: #1cc88a; /* Success messages and indicators */
+  --info: #36b9cc; /* Informational messages */
+  --warning: #f6c23e; /* Warnings */
+  --danger: #e74a3b; /* Errors and critical alerts */
+  --secondary: #858796; /* Secondary elements */
+
+  /* Background and borders */
+  --light: #f8f9fc; /* Light background */
+  --dark: #5a5c69; /* Dark background */
+  --body-bg: #f8f9fa; /* Default body background */
+  --card-border: #e3e6f0; /* Card border color */
+  --sidebar-bg: #f8f9fa; /* Sidebar background */
+  --sidebar-active: #e9ecef; /* Active sidebar item */
+
+  /* Text colors */
+  --text-primary: #212529; /* Primary text color */
+  --text-muted: #6c757d; /* Muted text */
 }
 
 /* Dark theme variables */

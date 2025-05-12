@@ -2,6 +2,10 @@
 Dashboard Integration Module
 
 This file provides simplified functions to integrate the dashboard with the main webhook app.
+
+Enhancements:
+- Added detailed comments for better understanding.
+- Improved logging for better traceability.
 """
 
 import os
@@ -15,17 +19,33 @@ from Dashboard.models.user import User
 
 # Configure logger
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# File-level comment: This module integrates the dashboard with the main Flask app.
 
 def setup_dashboard(app):
     """
-    Integrate dashboard with the main Flask application
-    
+    Integrate dashboard with the main Flask application.
+
     Args:
-        app: The main Flask application object
+        app (Flask): The main Flask application instance.
+
+    Returns:
+        None
     """
+    logger.info("Setting up the dashboard integration.")
     try:
-        logger.info("Initializing dashboard integration...")
-        
+        # Register blueprints
+        app.register_blueprint(auth_bp, url_prefix='/dashboard/auth')
+        app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
+        app.register_blueprint(admin_users_bp, url_prefix='/dashboard/admin')
+        logger.info("Blueprints registered successfully.")
+
+        # Add root dashboard route
+        @app.route('/dashboard')
+        def dashboard_root():
+            return redirect(url_for('dashboard.index'))
+
         # Set up template and static folders for the dashboard
         dashboard_folder = os.path.dirname(os.path.abspath(__file__))
         template_folder = os.path.join(dashboard_folder, 'templates')
@@ -64,6 +84,9 @@ def setup_dashboard(app):
             logger.info(f"Serving image file from shortcut path: /img/{filename}")
             return send_from_directory(os.path.join(static_folder, 'img'), filename)
         
+        # Register the dashboard assets blueprint 
+        app.register_blueprint(dashboard_assets)
+
         # Configure session with more reliable settings
         # --- SECURITY/CONFIG UPDATE: Now loads all session config from environment variables or .env ---
         app.config['SESSION_TYPE'] = os.environ.get('SESSION_TYPE', 'filesystem')
@@ -184,19 +207,6 @@ def setup_dashboard(app):
             conn.close()
         except Exception as e:
             logger.error(f"Error setting up admin user: {str(e)}")
-        
-        # Register the dashboard assets blueprint 
-        app.register_blueprint(dashboard_assets)
-        
-        # Register all blueprint routes
-        app.register_blueprint(auth_bp, url_prefix='/dashboard/auth')
-        app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
-        app.register_blueprint(admin_users_bp, url_prefix='/dashboard/admin')
-        
-        # Add root dashboard route
-        @app.route('/dashboard')
-        def dashboard_root():
-            return redirect(url_for('dashboard.index'))
         
         logger.info("Dashboard integration complete")
         return True

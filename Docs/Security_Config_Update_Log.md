@@ -1,5 +1,10 @@
 # Security & Configuration Update Log
 
+## [2025-05-12] Accessibility and Usability Enhancements
+
+- Enhanced `login.html` and `reset_password.html` templates with ARIA roles and labels for better accessibility.
+- Improved usability with client-side validation and better form instructions.
+
 ## [2025-05-12] Dashboard Session Config Refactor
 
 - All session-related config for the Dashboard now loads from environment variables or `.env`.

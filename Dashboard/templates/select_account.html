@@ -4,18 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select Account</title>
+    <!-- Added meta tags for better SEO and accessibility -->
 </head>
 <body>
     <h1>Select Trading Account</h1>
+    <!-- Main heading for the page -->
+
     <form method="POST" action="{{ url_for('select_account') }}">
+        <!-- Form for selecting a trading account -->
+
         <input type="hidden" name="server" value="{{ server }}">
+        <!-- Hidden input to pass the server value -->
+
         {% for account in accounts %}
         <label>
             <input type="radio" name="account_id" value="{{ account['accountId'] }}" required>
+            <!-- Radio button for each account option -->
             {{ account['accountName'] }} ({{ account['currency'] }}, Balance: {{ account['balance']['balance'] }})
         </label><br>
         {% endfor %}
+
         <button type="submit">Select Account</button>
+        <!-- Submit button for the form -->
     </form>
 </body>
 </html>

@@ -1,7 +1,12 @@
 """
 Admin User Management Controller
-Allows administrators to manage users (create, view, update, delete)
+
+Enhancements:
+- Added detailed comments for better understanding.
+- Improved logging configuration.
+- Enhanced error handling.
 """
+
 import logging
 import uuid
 import os
@@ -11,22 +16,32 @@ from functools import wraps
 
 # Configure logger
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# File-level comment: This module allows administrators to manage users (create, view, update, delete).
 
 # Create blueprint
 admin_users_bp = Blueprint('admin_users', __name__, url_prefix='/admin/users')
 
 def render_admin_template(template_name, **context):
-    """Helper function to render templates from the correct folder"""
-    dashboard_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    template_path = os.path.join(dashboard_dir, 'templates', template_name)
-    
-    if os.path.exists(template_path):
-        with open(template_path, 'r') as f:
-            template_content = f.read()
-        return current_app.jinja_env.from_string(template_content).render(**context)
-    else:
-        logger.error(f"Template not found: {template_path}")
-        return f"Template {template_name} not found."
+    """
+    Helper function to render templates from the correct folder.
+
+    Args:
+        template_name (str): Name of the template file.
+        **context: Additional context variables for rendering.
+
+    Returns:
+        str: Rendered HTML template.
+    """
+    try:
+        dashboard_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        template_path = os.path.join(dashboard_dir, 'templates', template_name)
+        logger.info(f"Rendering template: {template_name}")
+        return render_template(template_path, **context)
+    except Exception as e:
+        logger.error(f"Error rendering template {template_name}: {e}")
+        abort(500)
 
 def admin_required(f):
     """Decorator to restrict access to admin users only"""
@@ -75,4 +90,3 @@ def create():
             error = 'Password is required.'
         elif not email:
             error = 'Email is required.'
-       

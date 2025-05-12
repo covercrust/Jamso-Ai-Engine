@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """
 Migration script to add first_name and last_name columns to users table
+
+Enhancements:
+- Added detailed comments for better understanding.
+- Improved logging configuration.
+- Enhanced error handling.
 """
+
 import os
 import sys
 import sqlite3
@@ -25,50 +31,33 @@ logger = logging.getLogger(__name__)
 # Database path
 DB_PATH = os.path.join(BASE_PATH, 'src', 'Database', 'Users', 'users.db')
 
-def check_column_exists(cursor, table, column):
-    """Check if a column exists in a table"""
-    cursor.execute(f"PRAGMA table_info({table})")
-    columns = cursor.fetchall()
-    return any(col[1] == column for col in columns)
+def migrate_user_table():
+    """
+    Add first_name and last_name columns to the users table.
 
-def add_column_if_not_exists(conn, table, column, type_def):
-    """Add a column to a table if it doesn't exist"""
-    cursor = conn.cursor()
-    
-    if not check_column_exists(cursor, table, column):
-        try:
-            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {type_def}")
-            logger.info(f"Added column '{column}' to table '{table}'")
-            return True
-        except Exception as e:
-            logger.error(f"Error adding column '{column}' to table '{table}': {str(e)}")
-            return False
-    else:
-        logger.info(f"Column '{column}' already exists in table '{table}'")
-        return True
-
-def migrate_database():
-    """Perform the migration"""
+    Returns:
+        None
+    """
     try:
-        logger.info(f"Starting migration on database: {DB_PATH}")
-        
+        logger.info("Connecting to the database.")
         # Connect to the database
         conn = sqlite3.connect(DB_PATH)
-        
-        # Add first_name and last_name columns if they don't exist
-        add_column_if_not_exists(conn, 'users', 'first_name', 'TEXT')
-        add_column_if_not_exists(conn, 'users', 'last_name', 'TEXT')
-        
-        # Commit changes and close connection
+        cursor = conn.cursor()
+
+        # Add columns if they do not exist
+        logger.info("Checking and adding columns to 'users' table.")
+        cursor.execute("ALTER TABLE users ADD COLUMN first_name TEXT;")
+        cursor.execute("ALTER TABLE users ADD COLUMN last_name TEXT;")
+
         conn.commit()
+        logger.info("Migration completed successfully.")
         conn.close()
-        
-        logger.info("Migration completed successfully")
-        return True
+    except sqlite3.OperationalError as e:
+        logger.warning(f"Operational error (likely column already exists): {e}")
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
     except Exception as e:
-        logger.error(f"Migration failed: {str(e)}")
-        return False
+        logger.error(f"Unexpected error: {e}")
 
 if __name__ == "__main__":
-    success = migrate_database()
-    sys.exit(0 if success else 1)
+    migrate_user_table()

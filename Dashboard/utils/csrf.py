@@ -1,13 +1,20 @@
 """
 CSRF Protection Utility
 
-This module provides CSRF protection for dashboard forms using Flask-WTF.
+Enhancements:
+- Added detailed comments for better understanding.
+- Improved logging configuration.
+- Enhanced error handling.
 """
+
 from flask import Blueprint, request, session, abort, current_app
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 import logging
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# File-level comment: This module provides CSRF protection for dashboard forms using Flask-WTF.
 
 # Create a CSRF protection instance
 csrf = CSRFProtect()
@@ -15,13 +22,21 @@ csrf = CSRFProtect()
 def init_csrf(app):
     """
     Initialize CSRF protection for the Flask application.
-    
+
     Args:
         app: Flask application instance
+
+    Returns:
+        None
     """
-    # Initialize CSRF protection
-    csrf.init_app(app)
-    
+    try:
+        logger.info("Initializing CSRF protection.")
+        csrf.init_app(app)
+        logger.info("CSRF protection initialized successfully.")
+    except Exception as e:
+        logger.error(f"Error initializing CSRF protection: {e}")
+        raise
+
     # Create a function to inject CSRF token into all templates
     @app.context_processor
     def inject_csrf_token():

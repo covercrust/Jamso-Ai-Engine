@@ -1,7 +1,12 @@
 """
 Jamso AI Trading Bot - Dashboard Controller
-Handles dashboard routes and functionality
+
+Enhancements:
+- Added detailed comments for better understanding.
+- Improved logging configuration.
+- Enhanced error handling.
 """
+
 import logging
 import time
 import sqlite3
@@ -14,6 +19,9 @@ from ..models.user import User
 
 # Configure logger
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# File-level comment: This module handles dashboard routes and functionality for the Jamso AI Trading Bot.
 
 # Create blueprint - url_prefix will be added in main app.py
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard', template_folder='templates')
@@ -957,3 +965,20 @@ def api_delete_instrument(instrument_id):
     conn.commit()
     conn.close()
     return jsonify({'success': True})
+
+# Example route
+@dashboard_bp.route('/overview')
+def overview():
+    """
+    Render the dashboard overview page.
+
+    Returns:
+        str: Rendered HTML template for the overview page.
+    """
+    try:
+        logger.info("Rendering dashboard overview page.")
+        return render_template('overview.html')
+    except Exception as e:
+        logger.error(f"Error rendering overview page: {e}")
+        flash("An error occurred while loading the overview page.", "error")
+        return redirect(url_for('dashboard.index'))

@@ -1,4 +1,7 @@
 // Instrument management for settings page
+// Enhancements:
+// - Added detailed comments for better understanding.
+// - Optimized code for maintainability and clarity.
 
 document.addEventListener('DOMContentLoaded', function() {
     // Instrument settings initialization
@@ -6,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadInstruments();
         setupInstrumentHandlers();
     }
-    
+
     // Profile settings initialization
     if (document.getElementById('profileForm')) {
         document.getElementById('profileForm').addEventListener('submit', function(e) {
@@ -16,7 +19,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Profile update function
+/**
+ * Update the user profile.
+ *
+ * Purpose:
+ * - Handles form submission for updating user profile settings.
+ */
 function updateProfile() {
     const formData = {
         email: document.getElementById('email').value,
@@ -26,19 +34,21 @@ function updateProfile() {
         new_password: document.getElementById('new_password')?.value,
         confirm_password: document.getElementById('confirm_password')?.value
     };
-    
+
+    console.log("Updating profile with data:", formData);
+
     // Check if password fields are filled
     if ((formData.new_password || formData.confirm_password) && !formData.current_password) {
         alert('Please enter your current password to change your password');
         return;
     }
-    
+
     // Check if passwords match
     if (formData.new_password !== formData.confirm_password) {
         alert('New passwords do not match');
         return;
     }
-    
+
     fetch('/dashboard/api/profile/update', {
         method: 'POST',
         headers: { 
@@ -65,6 +75,12 @@ function updateProfile() {
     });
 }
 
+/**
+ * Load instruments from the server.
+ *
+ * Purpose:
+ * - Fetches the list of instruments and renders them in the table.
+ */
 function loadInstruments() {
     fetch('/dashboard/api/instruments')
         .then(res => res.json())
@@ -75,6 +91,14 @@ function loadInstruments() {
         });
 }
 
+/**
+ * Render the instrument table.
+ *
+ * Purpose:
+ * - Populates the instrument settings table with data.
+ *
+ * @param {Array} instruments - List of instruments to display.
+ */
 function renderInstrumentTable(instruments) {
     const tbody = document.getElementById('instrumentSettingsTableBody');
     if (!tbody) return;
@@ -96,6 +120,12 @@ function renderInstrumentTable(instruments) {
     });
 }
 
+/**
+ * Setup handlers for instrument actions.
+ *
+ * Purpose:
+ * - Adds event listeners for adding, editing, and deleting instruments.
+ */
 function setupInstrumentHandlers() {
     document.getElementById('addInstrumentBtn')?.addEventListener('click', function() {
         // Show a modal or prompt for new instrument details
