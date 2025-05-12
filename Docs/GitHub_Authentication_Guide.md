@@ -24,6 +24,7 @@ GitHub no longer accepts regular passwords for Git operations. Instead, you need
 ### 2. Use the Token for Git Operations
 
 When pushing to GitHub, you'll be prompted for username and password:
+
 - For username: Enter your GitHub username
 - For password: Enter your Personal Access Token (not your GitHub password)
 
@@ -67,6 +68,7 @@ ssh-add ~/.ssh/id_ed25519
 ### 4. Add the SSH Key to GitHub
 
 1. Copy your public key to clipboard:
+
    ```bash
    cat ~/.ssh/id_ed25519.pub
    ```
@@ -100,6 +102,7 @@ You should see a message like: "Hi username! You've successfully authenticated..
 ### "Remote repository not found" Error
 
 This usually means:
+
 1. The repository doesn't exist on GitHub yet
 2. You're using the wrong username in the URL
 3. You don't have access to the repository

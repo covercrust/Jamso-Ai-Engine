@@ -61,7 +61,7 @@ git config --global credential.helper 'cache --timeout=3600'
 
 ## 6. Verify Your Repository
 
-After pushing your code, go to https://github.com/covercrust/Jamso-Ai-Engine to verify that your code has been uploaded successfully.
+After pushing your code, go to <https://github.com/covercrust/Jamso-Ai-Engine> to verify that your code has been uploaded successfully.
 
 ## Next Steps
 

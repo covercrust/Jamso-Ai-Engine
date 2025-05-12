@@ -103,11 +103,21 @@ def load_configuration() -> Dict[str, Any]:
         # Try to get API credentials from database first
         try:
             credentials = get_api_credentials()
-            logger.info("Loaded API credentials from database")
+            logger.info(f"Loaded API credentials from database: {list(credentials.keys())}")
+            
+            # Map the credential names to what the test expects
+            os.environ['CAPITAL_API_KEY'] = credentials['api_key']
+            os.environ['CAPITAL_API_LOGIN'] = credentials['username']
+            os.environ['CAPITAL_API_PASSWORD'] = credentials['password']
+            
+            # Debug output
+            logger.info(f"API Key (first 4 chars): {credentials['api_key'][:4]}...")
+            logger.info(f"Username: {credentials['username']}")
+            logger.info(f"Environment variables set: {[key for key in os.environ.keys() if 'CAPITAL' in key]}")
         except Exception as db_err:
             logger.error(f"Failed to load credentials from database: {db_err}, falling back to environment")
             # Source environment variables as fallback
-            source_env_file(f'{ROOT_DIR}src/Credentials/env.sh')
+            source_env_file(f'{ROOT_DIR}/src/Credentials/env.sh')
             
             # Create credentials dict from environment variables
             credentials = {
@@ -147,9 +157,9 @@ def load_configuration() -> Dict[str, Any]:
     
     # Combine data
     config = {
-        'CAPITAL_API_KEY': os.getenv('CAPITAL_API_KEY'),
-        'CAPITAL_API_LOGIN': os.getenv('CAPITAL_API_LOGIN'),
-        'CAPITAL_API_PASSWORD': os.getenv('CAPITAL_API_PASSWORD'),
+        'CAPITAL_API_KEY': os.environ.get('CAPITAL_API_KEY'),
+        'CAPITAL_API_LOGIN': os.environ.get('CAPITAL_API_LOGIN'),
+        'CAPITAL_API_PASSWORD': os.environ.get('CAPITAL_API_PASSWORD'),
         'server': active_account.get('server', 'default_server'),  # Provide a default value or handle appropriately
         'active_account': active_account
     }
@@ -157,8 +167,9 @@ def load_configuration() -> Dict[str, Any]:
     # Validate required environment variables
     for key in ['CAPITAL_API_KEY', 'CAPITAL_API_LOGIN', 'CAPITAL_API_PASSWORD']:
         if not config.get(key):
+            logger.error(f"Required environment variable {key} is not available in config")
             raise ValueError(f"Required environment variable {key} is not set")
-        logger.debug(f"Loaded env var: {key}={config[key]}")
+        logger.debug(f"Loaded env var: {key}={config[key][:4]}...")
     
     return config
 
@@ -186,8 +197,26 @@ def main():
     
     try:
         # Load configuration
-        config = load_configuration()
+        config_data = load_configuration()
         logger.debug("Configuration loaded successfully")
+        
+        # Extract credentials and active account from config data
+        credentials = config_data['credentials']
+        active_account = config_data['active_account']
+        
+        # Build the final config
+        config = {
+            'CAPITAL_API_KEY': credentials['api_key'],
+            'CAPITAL_API_LOGIN': credentials['username'],
+            'CAPITAL_API_PASSWORD': credentials['password'],
+            'server': active_account.get('server', 'default_server'),
+            'active_account': active_account
+        }
+        
+        # Debug output to verify config values
+        logger.info(f"Using API Key (first 4 chars): {config['CAPITAL_API_KEY'][:4]}...")
+        logger.info(f"Using username: {config['CAPITAL_API_LOGIN']}")
+        logger.info(f"Server URL: {config['server']}")
         
         # Initialize request handler with retry mechanism
         request_handler = RequestHandler()
@@ -231,19 +260,17 @@ def main():
             logger.info("Testing account operations...")
             
             # Test account manager functions with delays between calls
-            logger.info("Testing get_accounts...")
+            logger.info("Testing load_accounts...")
             time.sleep(1)  # Rate limiting protection
-            account_list = account_manager.get_accounts()
+            account_list = account_manager.load_accounts()
             if not account_list:
                 raise Exception("No accounts returned")
             logger.info("Fetched account list successfully")
             
-            _ = account_manager.get_preferences()
-            logger.info("Account preferences retrieved")
-            preferences = account_manager.get_preferences()
-            logger.info("Account preferences retrieved")
+            account_manager.get_active_account()
+            logger.info("Active account retrieved")
             
-            _ = account_manager.get_accounts()
+            _ = account_manager.load_accounts()
             logger.info("All accounts retrieved")
         except Exception as e:
             logger.error(f"Error during account operations: {e}")

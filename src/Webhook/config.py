@@ -6,7 +6,7 @@ WEBHOOK_TOKEN = '6a87cf683ac94bc7f83bc09ba643dc578538d4eb46c931a60dc4fe3ec3c159c
 
 class Config:
     """Flask application configuration class"""
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_key_for_flask_sessions')
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_key_for_flask_sessions')  # Use string, not bytes
     DATABASE = os.path.join(BASE_PATH, 'src/Database/Webhook/trading_signals.db')
     ENV = os.environ.get('FLASK_ENV', 'development')
     DEBUG = ENV == 'development'

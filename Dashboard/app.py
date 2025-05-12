@@ -38,13 +38,13 @@ except ImportError as e:
     resource_monitoring_available = False
 
 # Import controllers after path setup
-from auth.auth_controller import auth_bp
-from controllers.dashboard_controller import dashboard_bp
-from controllers.admin.user_management import admin_users_bp
-from models.user import User
+from Dashboard.auth.auth_controller import auth_bp
+from Dashboard.controllers.dashboard_controller import dashboard_bp
+from Dashboard.controllers.admin.user_management import admin_users_bp
+from Dashboard.models.user import User
 
 # Import CSRF protection
-from utils.csrf import init_csrf, csrf_blueprint
+from Dashboard.utils.csrf import init_csrf, csrf_blueprint
 
 def create_app():
     """Create and configure the Flask application"""

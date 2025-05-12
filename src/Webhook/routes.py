@@ -111,13 +111,18 @@ def init_routes(app: Flask):
         # Redirect to dashboard instead of just returning JSON
         return redirect('/dashboard/')
 
-    # Add a static file handler for dashboard static files
-    @app.route('/dashboard/static/<path:filename>')
-    def dashboard_static(filename):
-        """Serve dashboard static files directly"""
-        dashboard_static_folder = os.path.join(os.path.dirname(__file__), 'dashboard', 'static')
-        return send_from_directory(dashboard_static_folder, filename)
-    
+    # Remove redundant static file routes (handled by dashboard_integration.py)
+    # @app.route('/dashboard/static/<path:filename>')
+    # def dashboard_static(filename):
+    #     ...
+    # @app.route('/js/<path:filename>')
+    # def serve_js(filename):
+    #     ...
+    # @app.route('/css/<path:filename>')
+    # def serve_css(filename):
+    #     ...
+    # These are now handled by dashboard_integration.py for consistency.
+
     def require_auth(f):
         @wraps(f)
         def decorated(*args, **kwargs):
@@ -461,20 +466,6 @@ def init_routes(app: Flask):
         except Exception as e:
             return jsonify_error(handle_request_error(e))
 
-    # Add stylesheets route
-    @app.route('/css/<path:filename>')
-    def serve_css(filename):
-        """Serve CSS files from the static/css folder"""
-        static_folder = os.path.join(os.path.dirname(__file__), 'static', 'css')
-        return send_from_directory(static_folder, filename)
-    
-    # Add JavaScript route
-    @app.route('/js/<path:filename>')
-    def serve_js(filename):
-        """Serve JavaScript files from the static/js folder"""
-        static_folder = os.path.join(os.path.dirname(__file__), 'static', 'js')
-        return send_from_directory(static_folder, filename)
-    
     # Add a max stop loss value endpoint
     @app.route('/api/max_stop_loss_value')
     def max_stop_loss_value():

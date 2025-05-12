@@ -21,6 +21,12 @@ dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard', templat
 # Server control process IDs
 SERVER_PID_FILE = '/home/jamso-ai-server/Jamso-Ai-Engine/tmp/server.pid'
 
+# Ensure g.user is always set to avoid AttributeError
+@dashboard_bp.before_app_request
+def load_user_to_g():
+    if not hasattr(g, 'user'):
+        g.user = None
+
 def render_dashboard_template(template_name, **context):
     """Helper function to render templates from the correct folder"""
     dashboard_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -81,7 +87,7 @@ def index():
     # Get real webhook stats
     trade_stats = get_trade_stats()
     
-    return render_dashboard_template('dashboard/index.html', 
+    return render_dashboard_template('Public_html/index.html', 
                          page_title="Dashboard - Jamso AI Trading Bot",
                          username=session.get('username', 'User'),
                          uptime=uptime,
@@ -94,7 +100,7 @@ def trades():
     # Get actual trades from the database
     trades_data = get_recent_trades(10)  # Get 10 most recent trades
     
-    return render_dashboard_template('dashboard/trades.html', 
+    return render_dashboard_template('Public_html/trades.html', 
                          page_title="Trades - Jamso AI Trading Bot",
                          username=session.get('username', 'User'),
                          trades=trades_data)
@@ -106,7 +112,7 @@ def signals():
     # Get actual signals from the database
     signals_data = get_recent_signals(10)  # Get 10 most recent signals
     
-    return render_dashboard_template('dashboard/signals.html', 
+    return render_dashboard_template('Public_html/signals.html', 
                          page_title="Signals - Jamso AI Trading Bot",
                          username=session.get('username', 'User'),
                          signals=signals_data)
@@ -118,7 +124,7 @@ def analytics():
     # Get actual performance metrics
     performance_data = get_performance_data()
     
-    return render_dashboard_template('dashboard/analytics.html', 
+    return render_dashboard_template('Public_html/analytics.html', 
                          page_title="Analytics - Jamso AI Trading Bot",
                          username=session.get('username', 'User'),
                          performance=performance_data)
@@ -130,7 +136,7 @@ def settings():
     # Get API keys for the current user
     api_keys = get_user_api_keys(g.user.id)
     
-    return render_dashboard_template('dashboard/settings.html', 
+    return render_dashboard_template('Public_html/settings.html', 
                          page_title="Settings - Jamso AI Trading Bot",
                          username=session.get('username', 'User'),
                          user=g.user,
@@ -815,3 +821,86 @@ def get_user_api_keys(user_id):
             'capital_demo': True,
             'webhook_key': ''
         }
+
+def get_instruments_db_path():
+    return os.path.join('/home/jamso-ai-server/Jamso-Ai-Engine/src/Database/Webhook', 'trading_signals.db')
+
+def init_instruments_table():
+    db_path = get_instruments_db_path()
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS instruments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            risk_percent REAL NOT NULL,
+            stop_loss TEXT NOT NULL,
+            take_profit TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_instruments_table()
+
+@dashboard_bp.route('/api/instruments', methods=['GET'])
+def api_list_instruments():
+    db_path = get_instruments_db_path()
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM instruments ORDER BY name')
+    instruments = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify({'success': True, 'data': instruments})
+
+@dashboard_bp.route('/api/instruments', methods=['POST'])
+def api_add_instrument():
+    data = request.json
+    db_path = get_instruments_db_path()
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO instruments (name, risk_percent, stop_loss, take_profit, enabled)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (
+        data.get('name'),
+        float(data.get('risk_percent', 0)),
+        data.get('stop_loss'),
+        data.get('take_profit'),
+        1 if data.get('enabled', True) else 0
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@dashboard_bp.route('/api/instruments/<int:instrument_id>', methods=['PUT'])
+def api_update_instrument(instrument_id):
+    data = request.json
+    db_path = get_instruments_db_path()
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE instruments SET name=?, risk_percent=?, stop_loss=?, take_profit=?, enabled=? WHERE id=?
+    ''', (
+        data.get('name'),
+        float(data.get('risk_percent', 0)),
+        data.get('stop_loss'),
+        data.get('take_profit'),
+        1 if data.get('enabled', True) else 0,
+        instrument_id
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@dashboard_bp.route('/api/instruments/<int:instrument_id>', methods=['DELETE'])
+def api_delete_instrument(instrument_id):
+    db_path = get_instruments_db_path()
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM instruments WHERE id=?', (instrument_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
