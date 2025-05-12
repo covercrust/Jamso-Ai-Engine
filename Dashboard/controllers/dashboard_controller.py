@@ -316,6 +316,59 @@ def delete_credential(credential_id):
         logger.error(f"Error deleting credential: {str(e)}")
         return jsonify({'error': 'Failed to delete credential'}), 500
 
+@dashboard_bp.route('/api/profile/update', methods=['POST'])
+@login_required
+def update_profile():
+    """API endpoint to update user profile settings"""
+    try:
+        data = request.json
+        user = g.user
+        
+        # Update email if provided
+        if data.get('email') and data['email'] != user.email:
+            user.email = data['email']
+        
+        # Update names if provided
+        if 'first_name' in data:
+            user.first_name = data['first_name']
+        if 'last_name' in data:
+            user.last_name = data['last_name']
+        
+        # Handle password change if requested
+        if data.get('new_password') and data.get('current_password'):
+            import hashlib
+            # Verify current password
+            current_hash = hashlib.sha256(data['current_password'].encode()).hexdigest()
+            if current_hash != user.password_hash:
+                return jsonify({
+                    'success': False,
+                    'message': 'Current password is incorrect'
+                }), 400
+                
+            # Update to new password
+            if data.get('new_password') == data.get('confirm_password'):
+                user.password_hash = hashlib.sha256(data['new_password'].encode()).hexdigest()
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'New passwords do not match'
+                }), 400
+        
+        # Save user to database
+        user.save()
+        
+        logger.info(f"User {user.username} updated their profile")
+        return jsonify({
+            'success': True,
+            'message': 'Profile updated successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error updating profile: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error updating profile: {str(e)}'
+        }), 500
+
 # Functions to interact with the WebHook database
 
 def get_trade_stats():

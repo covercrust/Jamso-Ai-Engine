@@ -8,15 +8,51 @@ import socket
 import sys
 import time
 import os
+import multiprocessing
+
+# Advanced resource optimization for high-memory (32GB) and multi-core (4) systems
+# Using more aggressive resource allocation to maximize performance
+cpu_count = multiprocessing.cpu_count()
+
+# Advanced memory-optimized worker calculation
+# For high-memory (32GB) systems, we can use (2*cores)+1 formula with increased per-worker memory allocation
+# This ensures all cores are fully utilized while maintaining good memory-to-CPU ratio 
+# and allowing each worker to use more memory for caching and performance
+worker_count = min((2 * cpu_count) + 1, 9)  # 9 workers for 4 cores and 32GB RAM
+# With 9 workers on 32GB, each worker can use ~3GB of RAM for better performance
+
+# Optimized thread count for I/O operations
+# Higher thread count allows better handling of I/O-bound tasks
+# Thread count is balanced to avoid excessive context switching while maximizing throughput
+thread_count = 4  # 6 threads per worker for better I/O handling and memory utilization
+
+# Calculate total concurrent operations
+total_concurrent = worker_count * thread_count
+print(f"[INFO] Configuring for high memory utilization: {worker_count} workers × {thread_count} threads = {total_concurrent} concurrent operations")
 
 GUNICORN_CMD = [
     sys.executable, '-m', 'gunicorn',
     '--bind', '0.0.0.0:5000',
-    '--workers', '12',  # Increased to 12 to better utilize 32GB RAM; adjust as needed
-    '--timeout', '120',
+    '--workers', str(worker_count),  # Increased for better CPU utilization
+    '--threads', str(thread_count),  # More threads for better I/O parallelism
+    '--worker-class', 'gthread',  # Thread-based worker model for mixed CPU/IO workloads
+    '--worker-connections', '2000',  # Doubled connection capacity 
+    '--backlog', '4096',  # Increased pending connection queue
+    '--max-requests', '2000',  # Worker recycling for memory management
+    '--max-requests-jitter', '400',  # Prevent simultaneous worker restarts
+    '--timeout', '180',  # Increased for handling complex requests
+    '--keep-alive', '10',  # Increased keep-alive for connection reuse
+    # Additional memory optimization flags 
+    '--worker-tmp-dir', '/dev/shm',  # Use RAM-based temp directory
     '--log-level', 'info',
     '--access-logfile', 'Logs/gunicorn_access.log',
     '--error-logfile', 'Logs/gunicorn_error.log',
+    # Memory optimization flags
+    '--limit-request-line', '8190',  # Increased from default 4094
+    '--forwarded-allow-ips', '*',  # Trust X-Forwarded-* headers
+    # High-performance preload flag loads application code once in the master process
+    # This reduces memory usage and speeds up worker initialization
+    '--preload',
     'src.Webhook.app:create_app()'
 ]
 

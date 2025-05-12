@@ -61,7 +61,8 @@ class User:
     }
     
     def __init__(self, id=None, username=None, password_hash=None, email=None, 
-                 role=None, created_at=None, last_login=None, api_key=None, **kwargs):
+                 role=None, created_at=None, last_login=None, api_key=None,
+                 first_name=None, last_name=None, **kwargs):
         self.id = id
         self.username = username
         self.password_hash = password_hash
@@ -70,6 +71,8 @@ class User:
         self.created_at = created_at or datetime.now().isoformat()
         self.last_login = last_login
         self.api_key = api_key  # Added api_key field
+        self.first_name = first_name or ''
+        self.last_name = last_name or ''
         
         # Ignore any other keyword arguments
         for key, value in kwargs.items():
@@ -108,6 +111,8 @@ class User:
                 email TEXT,
                 role TEXT NOT NULL DEFAULT 'user',
                 api_key TEXT UNIQUE,
+                first_name TEXT,
+                last_name TEXT,
                 created_at TEXT NOT NULL,
                 last_login TEXT
             )
@@ -194,15 +199,15 @@ class User:
                 # Update existing user
                 cursor.execute('''
                 UPDATE users 
-                SET username = ?, password_hash = ?, email = ?, role = ?, last_login = ?, api_key = ? 
+                SET username = ?, password_hash = ?, email = ?, role = ?, last_login = ?, api_key = ?, first_name = ?, last_name = ? 
                 WHERE id = ?
-                ''', (self.username, self.password_hash, self.email, self.role, self.last_login, self.api_key, self.id))
+                ''', (self.username, self.password_hash, self.email, self.role, self.last_login, self.api_key, self.first_name, self.last_name, self.id))
             else:
                 # Insert new user
                 cursor.execute('''
-                INSERT INTO users (username, password_hash, email, role, created_at, last_login, api_key)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', (self.username, self.password_hash, self.email, self.role, self.created_at, self.last_login, self.api_key))
+                INSERT INTO users (username, password_hash, email, role, created_at, last_login, api_key, first_name, last_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (self.username, self.password_hash, self.email, self.role, self.created_at, self.last_login, self.api_key, self.first_name, self.last_name))
                 self.id = cursor.lastrowid
             
             conn.commit()

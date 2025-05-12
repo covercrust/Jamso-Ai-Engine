@@ -1,11 +1,69 @@
 // Instrument management for settings page
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Instrument settings initialization
     if (document.getElementById('instrumentSettingsTable')) {
         loadInstruments();
         setupInstrumentHandlers();
     }
+    
+    // Profile settings initialization
+    if (document.getElementById('profileForm')) {
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            updateProfile();
+        });
+    }
 });
+
+// Profile update function
+function updateProfile() {
+    const formData = {
+        email: document.getElementById('email').value,
+        first_name: document.getElementById('first_name')?.value || '',
+        last_name: document.getElementById('last_name')?.value || '',
+        current_password: document.getElementById('current_password')?.value,
+        new_password: document.getElementById('new_password')?.value,
+        confirm_password: document.getElementById('confirm_password')?.value
+    };
+    
+    // Check if password fields are filled
+    if ((formData.new_password || formData.confirm_password) && !formData.current_password) {
+        alert('Please enter your current password to change your password');
+        return;
+    }
+    
+    // Check if passwords match
+    if (formData.new_password !== formData.confirm_password) {
+        alert('New passwords do not match');
+        return;
+    }
+    
+    fetch('/dashboard/api/profile/update', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Profile updated successfully');
+            // Clear password fields
+            document.getElementById('current_password').value = '';
+            document.getElementById('new_password').value = '';
+            document.getElementById('confirm_password').value = '';
+        } else {
+            alert(data.message || 'Error updating profile');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating profile:', error);
+        alert('Error updating profile. Please try again.');
+    });
+}
 
 function loadInstruments() {
     fetch('/dashboard/api/instruments')
