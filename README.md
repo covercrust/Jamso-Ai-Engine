@@ -150,6 +150,18 @@ Jamso_AI_Server/
 ├── setup.sh            # Setup script
 └── passenger_wsgi.py   # WSGI entry point
 
+## [2025-05-12] Migration Note: Dashboard app.py renamed
+
+- `Dashboard/app.py` has been renamed to `Dashboard/dashboard_app.py` to avoid confusion with `src/Webhook/app.py`.
+
+- Update your scripts and documentation to use the new filename for running or importing the dashboard app.
+
+## [2025-05-12] Performance: Redis Session Support
+
+- Dashboard now supports Redis for session storage. Set `SESSION_TYPE=redis` and `REDIS_URL` in your `.env` to enable.
+
+- This offloads session management from CPU to memory, making better use of available RAM and improving performance on systems with lots of memory.
+
 ## Troubleshooting
 
 If you encounter issues during setup:

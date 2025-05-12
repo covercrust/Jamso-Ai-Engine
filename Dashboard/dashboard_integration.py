@@ -8,7 +8,6 @@ import os
 import logging
 from flask import Flask, Blueprint, redirect, url_for, send_from_directory
 from flask_session import Session
-from Dashboard.app import create_app as create_dashboard_app
 from Dashboard.auth.auth_controller import auth_bp 
 from Dashboard.controllers.dashboard_controller import dashboard_bp
 from Dashboard.controllers.admin.user_management import admin_users_bp
@@ -66,15 +65,20 @@ def setup_dashboard(app):
             return send_from_directory(os.path.join(static_folder, 'img'), filename)
         
         # Configure session with more reliable settings
-        app.config['SESSION_TYPE'] = 'filesystem'
-        app.config['SESSION_FILE_DIR'] = os.path.join('/home/jamso-ai-server/Jamso-Ai-Engine', 'instance', 'dashboard_sessions')
+        # --- SECURITY/CONFIG UPDATE: Now loads all session config from environment variables or .env ---
+        app.config['SESSION_TYPE'] = os.environ.get('SESSION_TYPE', 'filesystem')
+        app.config['SESSION_FILE_DIR'] = os.environ.get('SESSION_FILE_DIR', os.path.join('/home/jamso-ai-server/Jamso-Ai-Engine', 'instance', 'dashboard_sessions'))
         app.config['SESSION_PERMANENT'] = True
-        app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours in seconds
-        app.config['SESSION_USE_SIGNER'] = False  # Disable signing to avoid bytes/string conversion issues
-        app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
-        app.config['SESSION_COOKIE_HTTPONLY'] = True
-        app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-        app.config['SESSION_COOKIE_NAME'] = 'dashboard_session'
+        app.config['PERMANENT_SESSION_LIFETIME'] = int(os.environ.get('PERMANENT_SESSION_LIFETIME', '86400'))  # 24 hours in seconds
+        app.config['SESSION_USE_SIGNER'] = os.environ.get('SESSION_USE_SIGNER', 'False') == 'True'
+        app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
+        app.config['SESSION_COOKIE_HTTPONLY'] = os.environ.get('SESSION_COOKIE_HTTPONLY', 'True') == 'True'
+        app.config['SESSION_COOKIE_SAMESITE'] = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
+        app.config['SESSION_COOKIE_NAME'] = os.environ.get('SESSION_COOKIE_NAME', 'dashboard_session')
+        # Redis support for production
+        redis_url = os.environ.get('REDIS_URL')
+        if app.config['SESSION_TYPE'] == 'redis' and redis_url:
+            app.config['SESSION_REDIS'] = redis_url
         
         # Ensure session folder exists
         os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)

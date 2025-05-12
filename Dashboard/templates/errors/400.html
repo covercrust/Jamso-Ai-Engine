@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>400 Bad Request</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #d1ecf1; color: #0c5460; padding: 2em; }
+        .container { max-width: 600px; margin: auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #ccc; padding: 2em; }
+        h1 { color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>400 - Bad Request</h1>
+        <p>Your request could not be processed.</p>
+        <p>{{ error|safe }}</p>
+        <a href="/">Return to Dashboard</a>
+    </div>
+</body>
+</html>

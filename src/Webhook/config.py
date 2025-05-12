@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 import os
+from dotenv import load_dotenv
 
 BASE_PATH = '/home/jamso-ai-server/Jamso-Ai-Engine'
 WEBHOOK_TOKEN = '6a87cf683ac94bc7f83bc09ba643dc578538d4eb46c931a60dc4fe3ec3c159cd'
+
+# Load environment variables from .env if present
+load_dotenv(os.path.join(BASE_PATH, '.env'))
 
 class Config:
     """Flask application configuration class"""
