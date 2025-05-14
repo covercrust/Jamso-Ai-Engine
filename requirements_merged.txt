@@ -1,2 +1,0 @@
-# This file is now deprecated. Please use requirements.txt as the single source of truth for dependencies.
-# All dependencies are now managed in requirements.txt.

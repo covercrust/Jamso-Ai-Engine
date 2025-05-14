@@ -78,6 +78,8 @@ def check_memory_usage():
     elif used_memory_gb > total_memory * 0.8:
         logger.warning("Memory usage is high. Consider reducing worker count.")
 
+# Only referenced by setup_performance_cron.sh. If you do not use the cron job, this can be removed. Otherwise, keep for monitoring.
+
 def main():
     logger.info("Starting memory monitor for Jamso-AI Engine")
     

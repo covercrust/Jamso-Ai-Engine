@@ -18,7 +18,7 @@ run:
 
 # Run tests
 test:
-	source .venv/bin/activate && pytest
+	PYTHONPATH=src pytest
 
 # Lint the code
 lint:

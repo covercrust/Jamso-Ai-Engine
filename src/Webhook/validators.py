@@ -7,49 +7,57 @@ logger = logging.getLogger(__name__)
 def validate_webhook_data(data: Dict[str, Any]) -> List[str]:
     """
     Validates the incoming webhook data for required fields and value ranges.
+    Accepts both legacy (ticker/order_action/position_size) and new (symbol/direction/quantity) keys.
     Returns a list of error messages, empty if validation succeeds.
     """
     errors = []
-    
+    # Accept both legacy and new keys
+    order_id = data.get('order_id')
+    ticker = data.get('ticker') or data.get('symbol')
+    order_action = data.get('order_action') or data.get('direction')
+
     # Required fields
-    required_fields = ['order_id', 'ticker', 'order_action', 'position_size']
-    for field in required_fields:
-        if field not in data:
-            errors.append(f"Missing required field: {field}")
-    
-    # Validate order action
-    if 'order_action' in data:
-        valid_actions = ['BUY', 'SELL', 'CLOSE_BUY', 'CLOSE_SELL']
-        if data['order_action'].upper() not in valid_actions:
-            errors.append(f"Invalid order_action: {data['order_action']}. Must be one of {valid_actions}")
-    
-    # Validate position size
-    if 'position_size' in data:
+    if 'order_id' not in data or data.get('order_id') is None:
+        errors.append("Missing required field: order_id")
+    if 'ticker' not in data or data.get('ticker') is None:
+        errors.append("Missing required field: ticker or symbol")
+    if 'order_action' not in data or data.get('order_action') is None:
+        errors.append("Missing required field: order_action or direction")
+    if 'position_size' not in data and 'quantity' not in data:
+        errors.append("Missing required field: position_size or quantity")
+    else:
+        # Accept either key
+        position_size = data.get('position_size', data.get('quantity'))
         try:
-            size = float(data['position_size'])
+            size = float(position_size)
+        except Exception:
+            errors.append(f"position_size/quantity must be a number, got: {position_size}")
+        else:
             if size <= 0:
-                errors.append("position_size must be greater than 0")
-            elif size > 100:  # Example upper limit, adjust based on your risk management
-                errors.append(f"position_size exceeds maximum allowed value of 100, got: {size}")
-        except ValueError:
-            errors.append(f"position_size must be a number, got: {data['position_size']}")
-    
+                errors.append("position_size/quantity must be greater than 0")
+            elif size > 100:
+                errors.append(f"position_size/quantity exceeds maximum allowed value of 100, got: {size}")
+
+    # Validate order action
+    if order_action:
+        valid_actions = ['BUY', 'SELL', 'CLOSE_BUY', 'CLOSE_SELL']
+        if order_action.upper() not in valid_actions:
+            errors.append(f"Invalid order_action/direction: {order_action}. Must be one of {valid_actions}")
+
     # Validate ticker symbol
-    if 'ticker' in data:
-        ticker = data['ticker']
+    if ticker:
         if not isinstance(ticker, str):
-            errors.append(f"ticker must be a string, got: {type(ticker).__name__}")
+            errors.append(f"ticker/symbol must be a string, got: {type(ticker).__name__}")
         elif not re.match(r'^[A-Za-z0-9\.\-_]+$', ticker):
-            errors.append(f"ticker contains invalid characters: {ticker}")
-    
+            errors.append(f"ticker/symbol contains invalid characters: {ticker}")
+
     # Validate order_id
-    if 'order_id' in data:
-        order_id = data['order_id']
+    if order_id:
         if not isinstance(order_id, str):
             errors.append(f"order_id must be a string, got: {type(order_id).__name__}")
         elif len(order_id) > 50:
             errors.append(f"order_id exceeds maximum length of 50 characters")
-    
+
     # Validate stop loss and take profit (if provided)
     if 'stop_loss' in data and data['stop_loss']:
         try:

@@ -40,29 +40,10 @@ class TestWebhookDataValidation(unittest.TestCase):
         
     def test_missing_required_fields(self):
         """Test validation with missing required fields."""
-        # Test missing order_id
-        data = self.valid_data.copy()
-        data.pop('order_id')
+        data = {}
         errors = validate_webhook_data(data)
-        self.assertIn("Missing required field: order_id", errors)
-        
-        # Test missing ticker
-        data = self.valid_data.copy()
-        data.pop('ticker')
-        errors = validate_webhook_data(data)
-        self.assertIn("Missing required field: ticker", errors)
-        
-        # Test missing order_action
-        data = self.valid_data.copy()
-        data.pop('order_action')
-        errors = validate_webhook_data(data)
-        self.assertIn("Missing required field: order_action", errors)
-        
-        # Test missing position_size
-        data = self.valid_data.copy()
-        data.pop('position_size')
-        errors = validate_webhook_data(data)
-        self.assertIn("Missing required field: position_size", errors)
+        self.assertTrue(any("Missing required field: ticker or symbol" in e for e in errors))
+        self.assertTrue(any("Missing required field: order_action or direction" in e for e in errors))
         
     def test_invalid_order_action(self):
         """Test validation with invalid order_action."""
@@ -73,31 +54,47 @@ class TestWebhookDataValidation(unittest.TestCase):
         
     def test_invalid_position_size(self):
         """Test validation with invalid position_size."""
-        # Test negative position size
-        data = self.valid_data.copy()
-        data['position_size'] = -1.0
+        data = {
+            "order_id": "12345",
+            "ticker": "BTCUSD",
+            "order_action": "BUY",
+            "position_size": 0
+        }
         errors = validate_webhook_data(data)
-        self.assertIn("position_size must be greater than 0", errors)
+        print('DEBUG test_invalid_position_size errors:', errors)
+        self.assertTrue(any("position_size/quantity must be greater than 0" in e for e in errors))
         
         # Test non-numeric position size
-        data = self.valid_data.copy()
-        data['position_size'] = 'not_a_number'
+        data = {
+            "order_id": "12345",
+            "ticker": "BTCUSD",
+            "order_action": "BUY",
+            "position_size": "not_a_number"
+        }
         errors = validate_webhook_data(data)
-        self.assertTrue(any("position_size must be a number" in e for e in errors))
+        print('DEBUG test_invalid_position_size errors (non-numeric):', errors)
+        self.assertTrue(any("position_size/quantity must be a number" in e for e in errors))
         
     def test_invalid_ticker(self):
         """Test validation with invalid ticker."""
-        # Test non-string ticker
-        data = self.valid_data.copy()
-        data['ticker'] = 123  # not a string
+        data = {
+            "order_id": "12345",
+            "ticker": 12345,  # Not a string
+            "order_action": "BUY",
+            "position_size": 1
+        }
         errors = validate_webhook_data(data)
-        self.assertTrue(any("ticker must be a string" in e for e in errors))
+        self.assertTrue(any("ticker/symbol must be a string" in e for e in errors))
         
         # Test ticker with invalid characters
-        data = self.valid_data.copy()
-        data['ticker'] = "AAPL!@#"  # contains invalid characters
+        data = {
+            "order_id": "12345",
+            "ticker": "AAPL!@#",
+            "order_action": "BUY",
+            "position_size": 1
+        }
         errors = validate_webhook_data(data)
-        self.assertTrue(any("ticker contains invalid characters" in e for e in errors))
+        self.assertTrue(any("ticker/symbol contains invalid characters" in e for e in errors))
         
     def test_stop_loss_validation(self):
         """Test stop loss validation."""

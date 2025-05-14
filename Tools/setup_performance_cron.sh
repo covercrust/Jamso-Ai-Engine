@@ -1,6 +1,6 @@
 #!/bin/bash
 # Setup performance optimization cron jobs for Jamso-AI Engine
-# This script sets up cron jobs that will run at regular intervals to optimize system performance
+# This script sets up cron jobs for memory and DB optimization. Keep if you want automated performance maintenance; otherwise, mark for removal.
 
 # Base directory of Jamso-AI Engine
 BASE_DIR="/home/jamso-ai-server/Jamso-Ai-Engine"

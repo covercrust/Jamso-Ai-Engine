@@ -60,7 +60,7 @@ stop_process "${TUNNEL_PID_FILE}" "SSH tunnel"
 echo "Starting Webhook server..."
 cd "$(dirname "$0")"  # Make sure we're in the right directory
 export PYTHONPATH="$(pwd)"
-python -m Webhook.app >> "${WEBHOOK_LOG}" 2>&1 &
+PYTHONPATH=src python -m Webhook.app >> "${WEBHOOK_LOG}" 2>&1 &
 WEBHOOK_PID=$!
 echo ${WEBHOOK_PID} > "${WEBHOOK_PID_FILE}"
 echo "Webhook server started with PID: ${WEBHOOK_PID}"

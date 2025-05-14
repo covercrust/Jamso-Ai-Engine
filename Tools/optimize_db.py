@@ -40,6 +40,8 @@ DB_PATHS = [
     os.path.join(BASE_PATH, 'src', 'Database', 'Users', 'users.db'),
 ]
 
+# Only referenced by setup_performance_cron.sh. If you do not use the cron job, this can be removed. Otherwise, keep for DB optimization.
+
 def optimize_database(db_path):
     """Optimize a SQLite database file"""
     if not os.path.exists(db_path):

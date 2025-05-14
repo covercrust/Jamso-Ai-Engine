@@ -404,6 +404,10 @@ def execute_trade(client: Client, data: Dict[str, Any]) -> Dict[str, Any]:
             "code": "EXECUTION_FAILED"
         }
 
+def get_symbol(data):
+    """Get symbol from data, supporting both 'symbol' and 'ticker' keys for compatibility."""
+    return data.get('symbol') or data.get('ticker')
+
 def save_signal(db, data: Dict[str, Any]) -> int:
     """Save trading signal to database."""
     try:
@@ -423,13 +427,15 @@ def save_signal(db, data: Dict[str, Any]) -> int:
         # Generate order_id if not provided
         order_id = data.get('order_id') or f"{data['direction']}_{int(time.time()*1000)}"
         
+        symbol = get_symbol(data)
+        
         cursor = db.execute("""
             INSERT INTO signals 
             (order_id, symbol, direction, quantity, price, status) 
             VALUES (?, ?, ?, ?, ?, ?)
         """, (
             order_id,
-            data['symbol'],
+            symbol,
             data['direction'].upper(),
             float(data['quantity']),
             float(data.get('price', 0)),
