@@ -59,15 +59,16 @@ def login():
         logger.debug(f"Login attempt for username: {username}")
         
         try:
+            # Ensure the User class is correctly imported and used
             user = User.authenticate(username, password)
             if user:
                 session.clear()
                 session['user_id'] = user.id
                 session['username'] = user.username
                 session['role'] = user.role
-                
+
                 logger.info(f"User {username} logged in successfully.")
-                
+
                 next_page = request.args.get('next', url_for('dashboard.index'))
                 return redirect(next_page)
             else:

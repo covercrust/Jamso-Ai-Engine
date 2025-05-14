@@ -5,7 +5,7 @@
 # Set up environment
 set -e  # Exit on error
 source .venv/bin/activate
-source load_env.sh 2>/dev/null || source src/Credentials/env.sh 2>/dev/null || echo "Warning: Environment file not loaded"
+source Tools/load_env.sh || echo "Warning: Environment file not loaded"
 
 # Configuration
 export FLASK_ENV=development

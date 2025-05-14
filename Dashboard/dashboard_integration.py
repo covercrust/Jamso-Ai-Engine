@@ -10,12 +10,13 @@ Enhancements:
 
 import os
 import logging
-from flask import Flask, Blueprint, redirect, url_for, send_from_directory
+from flask import Flask, Blueprint, redirect, url_for, send_from_directory, jsonify
 from flask_session import Session
 from Dashboard.auth.auth_controller import auth_bp 
 from Dashboard.controllers.dashboard_controller import dashboard_bp
 from Dashboard.controllers.admin.user_management import admin_users_bp
 from Dashboard.models.user import User
+import psutil
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -207,6 +208,26 @@ def setup_dashboard(app):
             conn.close()
         except Exception as e:
             logger.error(f"Error setting up admin user: {str(e)}")
+        
+        # Add a route to fetch real-time server resource usage
+        @app.route('/dashboard/api/resource-usage', methods=['GET'])
+        def get_resource_usage():
+            """
+            API endpoint to fetch real-time server resource usage.
+
+            Returns:
+                JSON: A dictionary containing CPU, memory, and disk usage.
+            """
+            try:
+                resource_data = {
+                    'cpu_usage': psutil.cpu_percent(interval=1),
+                    'memory_usage': psutil.virtual_memory()._asdict(),
+                    'disk_usage': psutil.disk_usage('/')._asdict()
+                }
+                return jsonify(resource_data), 200
+            except Exception as e:
+                logger.error(f"Error fetching resource usage: {str(e)}")
+                return jsonify({'error': 'Failed to fetch resource usage'}), 500
         
         logger.info("Dashboard integration complete")
         return True

@@ -278,6 +278,29 @@ class User:
             logger.error(f"Error verifying password: {e}")
             raise
     
+    @classmethod
+    def authenticate(cls, username, password):
+        """
+        Authenticate a user by username and password.
+
+        Args:
+            username (str): The username of the user.
+            password (str): The plaintext password of the user.
+
+        Returns:
+            User: The authenticated user instance if successful, None otherwise.
+        """
+        try:
+            user = cls.find_by_username(username)
+            if user and cls.verify_password(password, user.password_hash):
+                logger.info(f"User {username} authenticated successfully.")
+                return user
+            logger.warning(f"Authentication failed for user {username}.")
+            return None
+        except Exception as e:
+            logger.error(f"Error during authentication for user {username}: {e}")
+            return None
+    
     def save(self):
         """
         Save user to database.
