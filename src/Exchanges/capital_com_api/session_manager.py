@@ -16,6 +16,9 @@ from src.Exchanges.capital_com_api.account_config import AccountConfig
 from src.Credentials.credentials_manager import CredentialManager
 
 class SessionManager:
+    MAX_SESSIONS = 10
+    active_sessions = 0
+
     def __init__(self, server: str, api_key: Optional[str] = None, 
                  username: Optional[str] = None, password: Optional[str] = None,
                  auth_tokens: Optional[Dict[str, str]] = None):
@@ -87,98 +90,106 @@ class SessionManager:
         Returns:
             Dict containing status and error information if applicable
         """
-        # Return detailed status information for better error handling
-        result = {
-            "success": False,
-            "error_code": None,
-            "error_message": None,
-            "attempt": attempt
-        }
+        if SessionManager.active_sessions >= SessionManager.MAX_SESSIONS:
+            return {"success": False, "error_code": "SESSION_LIMIT", "error_message": "Maximum session limit reached.", "attempt": attempt}
         
-        # Skip if already authenticated (first attempt)
-        if self.is_authenticated and attempt == 1:
-            if self._is_token_valid():
-                result["success"] = True
-                return result
-        
-        if attempt > max_attempts:
-            result["error_code"] = "MAX_ATTEMPTS_EXCEEDED"
-            result["error_message"] = f"Failed to create session after {max_attempts} attempts"
-            return result
-        
-        headers = {
-            "X-CAP-API-KEY": self.api_key,
-            "Content-Type": "application/json"
-        }
-        
-        data = {
-            "identifier": self.username,
-            "password": self.password
-        }
-        
+        SessionManager.active_sessions += 1
         try:
-            response = requests.post(
-                f"{self.server}/api/v1/session",
-                headers=headers,
-                json=data,
-                timeout=10  # Add timeout for better resilience
-            )
+            # Return detailed status information for better error handling
+            result = {
+                "success": False,
+                "error_code": None,
+                "error_message": None,
+                "attempt": attempt
+            }
             
-            if response.status_code == 200:
-                self.CST = response.headers.get('CST')
-                self.X_TOKEN = response.headers.get('X-SECURITY-TOKEN')
-                self.is_authenticated = True
-                self.last_auth_time = time.time()
-                result["success"] = True
+            # Skip if already authenticated (first attempt)
+            if self.is_authenticated and attempt == 1:
+                if self._is_token_valid():
+                    result["success"] = True
+                    return result
+            
+            if attempt > max_attempts:
+                result["error_code"] = "MAX_ATTEMPTS_EXCEEDED"
+                result["error_message"] = f"Failed to create session after {max_attempts} attempts"
                 return result
             
-            # Add detailed error information
-            result["error_code"] = f"HTTP_{response.status_code}"
+            headers = {
+                "X-CAP-API-KEY": self.api_key,
+                "Content-Type": "application/json"
+            }
             
-            # Try to parse error message from response
+            data = {
+                "identifier": self.username,
+                "password": self.password
+            }
+            
             try:
-                error_data = response.json()
-                result["error_message"] = error_data.get("errorCode", "") + ": " + error_data.get("errorMessage", "")
-            except:
-                result["error_message"] = f"HTTP error {response.status_code}: {response.reason}"
+                response = requests.post(
+                    f"{self.server}/api/v1/session",
+                    headers=headers,
+                    json=data,
+                    timeout=10  # Add timeout for better resilience
+                )
+                
+                if response.status_code == 200:
+                    self.CST = response.headers.get('CST')
+                    self.X_TOKEN = response.headers.get('X-SECURITY-TOKEN')
+                    self.is_authenticated = True
+                    self.last_auth_time = time.time()
+                    result["success"] = True
+                    return result
+                
+                # Add detailed error information
+                result["error_code"] = f"HTTP_{response.status_code}"
+                
+                # Try to parse error message from response
+                try:
+                    error_data = response.json()
+                    result["error_message"] = error_data.get("errorCode", "") + ": " + error_data.get("errorMessage", "")
+                except:
+                    result["error_message"] = f"HTTP error {response.status_code}: {response.reason}"
+                
+                # Rate limiting specific handling
+                if response.status_code == 429:
+                    result["error_code"] = "RATE_LIMITED"
+                    wait_time = min(2 ** attempt, 30)  # Exponential backoff, max 30 seconds
+                    time.sleep(wait_time)
+                    return self.create_session(attempt + 1, max_attempts)
+                    
+                # Session expired specific handling
+                if response.status_code == 401:
+                    result["error_code"] = "SESSION_EXPIRED"
+                    self.CST = None
+                    self.X_TOKEN = None
+                    self.is_authenticated = False
+                    if attempt < max_attempts:
+                        return self.create_session(attempt + 1, max_attempts)
+                
+                return result
+                
+            except requests.exceptions.ConnectionError as e:
+                result["error_code"] = "CONNECTION_ERROR"
+                result["error_message"] = str(e)
+                
+            except requests.exceptions.Timeout as e:
+                result["error_code"] = "TIMEOUT_ERROR"
+                result["error_message"] = str(e)
+                
+            except Exception as e:
+                result["error_code"] = "UNEXPECTED_ERROR"
+                result["error_message"] = str(e)
             
-            # Rate limiting specific handling
-            if response.status_code == 429:
-                result["error_code"] = "RATE_LIMITED"
-                wait_time = min(2 ** attempt, 30)  # Exponential backoff, max 30 seconds
+            # Retry logic
+            if attempt < max_attempts:
+                wait_time = 2 ** attempt
                 time.sleep(wait_time)
                 return self.create_session(attempt + 1, max_attempts)
-                
-            # Session expired specific handling
-            if response.status_code == 401:
-                result["error_code"] = "SESSION_EXPIRED"
-                self.CST = None
-                self.X_TOKEN = None
-                self.is_authenticated = False
-                if attempt < max_attempts:
-                    return self.create_session(attempt + 1, max_attempts)
             
             return result
-            
-        except requests.exceptions.ConnectionError as e:
-            result["error_code"] = "CONNECTION_ERROR"
-            result["error_message"] = str(e)
-            
-        except requests.exceptions.Timeout as e:
-            result["error_code"] = "TIMEOUT_ERROR"
-            result["error_message"] = str(e)
-            
-        except Exception as e:
-            result["error_code"] = "UNEXPECTED_ERROR"
-            result["error_message"] = str(e)
-        
-        # Retry logic
-        if attempt < max_attempts:
-            wait_time = 2 ** attempt
-            time.sleep(wait_time)
-            return self.create_session(attempt + 1, max_attempts)
-        
-        return result
+        finally:
+            if not self.is_authenticated:
+                SessionManager.active_sessions -= 1
 
     def _is_token_valid(self) -> bool:
         """Check if the current authentication token is still valid."""

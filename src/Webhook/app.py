@@ -14,6 +14,7 @@ import requests
 import logging
 from logging.handlers import RotatingFileHandler
 import traceback
+import fcntl
 
 from src.Logging.logger import get_logger, timing_decorator, configure_root_logger
 from src.Webhook.database import init_db
@@ -247,6 +248,19 @@ HEALTH_CHECK_INTERVAL = 20  # Increased from 10 to 20 seconds
 MAX_RESTART_ATTEMPTS = 3
 RESTART_COOLDOWN = 60  # seconds
 
+HEALTH_MONITOR_PID_FILE = '/tmp/jamso_health_monitor.pid'
+
+def singleton_health_monitor():
+    try:
+        pidfile = open(HEALTH_MONITOR_PID_FILE, 'w')
+        fcntl.lockf(pidfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        pidfile.write(str(os.getpid()))
+        pidfile.flush()
+        return pidfile
+    except IOError:
+        logger.error('Another instance of health monitor is already running. Exiting health monitor.')
+        return None
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -254,6 +268,10 @@ logger = logging.getLogger("health_monitor")
 
 def monitor_health():
     """Monitor the health of the Flask app and restart if unresponsive."""
+    pidfile = singleton_health_monitor()
+    if not pidfile:
+        return
+    
     logger.info(f"Health monitoring will start in {INITIAL_DELAY} seconds to allow app initialization")
     time.sleep(INITIAL_DELAY)  # Wait before starting health checks
     
@@ -261,6 +279,13 @@ def monitor_health():
     last_restart_time = 0
     
     while True:
+        mem = psutil.virtual_memory()
+        cpu = psutil.cpu_percent(interval=1)
+        if mem.percent > 90 or cpu > 95:
+            logger.error('System resources critically high. Skipping restart and waiting.')
+            time.sleep(60)
+            continue
+        
         current_time = time.time()
         
         # Check if we need to reset the restart counter (after cooldown period)

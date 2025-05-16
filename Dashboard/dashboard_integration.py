@@ -88,13 +88,12 @@ def setup_dashboard(app):
         # Register the dashboard assets blueprint 
         app.register_blueprint(dashboard_assets)
 
-        # Configure session with more reliable settings
-        # --- SECURITY/CONFIG UPDATE: Now loads all session config from environment variables or .env ---
-        app.config['SESSION_TYPE'] = os.environ.get('SESSION_TYPE', 'filesystem')
-        app.config['SESSION_FILE_DIR'] = os.environ.get('SESSION_FILE_DIR', os.path.join('/home/jamso-ai-server/Jamso-Ai-Engine', 'instance', 'dashboard_sessions'))
-        app.config['SESSION_PERMANENT'] = True
-        app.config['PERMANENT_SESSION_LIFETIME'] = int(os.environ.get('PERMANENT_SESSION_LIFETIME', '86400'))  # 24 hours in seconds
-        app.config['SESSION_USE_SIGNER'] = os.environ.get('SESSION_USE_SIGNER', 'False') == 'True'
+        # Configure session with memory-based settings to avoid filesystem writes
+        # --- SECURITY/CONFIG UPDATE: Using memory sessions to prevent disk space issues ---
+        app.config['SESSION_TYPE'] = os.environ.get('SESSION_TYPE', 'null')  # 'null' is safer than 'filesystem'
+        app.config['SESSION_PERMANENT'] = False  # Don't make sessions permanent
+        app.config['PERMANENT_SESSION_LIFETIME'] = int(os.environ.get('PERMANENT_SESSION_LIFETIME', '3600'))  # Reduced to 1 hour
+        app.config['SESSION_USE_SIGNER'] = os.environ.get('SESSION_USE_SIGNER', 'True') == 'True'
         app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
         app.config['SESSION_COOKIE_HTTPONLY'] = os.environ.get('SESSION_COOKIE_HTTPONLY', 'True') == 'True'
         app.config['SESSION_COOKIE_SAMESITE'] = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
@@ -103,9 +102,8 @@ def setup_dashboard(app):
         redis_url = os.environ.get('REDIS_URL')
         if app.config['SESSION_TYPE'] == 'redis' and redis_url:
             app.config['SESSION_REDIS'] = redis_url
-        
-        # Ensure session folder exists
-        os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
+            
+        # Skip filesystem session folder creation when not using filesystem
         
         # We're using string for secret key to avoid bytes conversion issues in Python 3.12
         if 'SECRET_KEY' in app.config and isinstance(app.config['SECRET_KEY'], bytes):

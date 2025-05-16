@@ -14,6 +14,7 @@ import subprocess
 import signal
 import logging
 from datetime import datetime
+import fcntl
 
 # Configure logging
 log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'Logs')
@@ -29,6 +30,19 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger('memory_monitor')
+
+PID_FILE = '/tmp/jamso_memory_monitor.pid'
+
+def singleton_check():
+    try:
+        pidfile = open(PID_FILE, 'w')
+        fcntl.lockf(pidfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        pidfile.write(str(os.getpid()))
+        pidfile.flush()
+        return pidfile
+    except IOError:
+        logger.error('Another instance of memory_monitor.py is already running. Exiting.')
+        sys.exit(1)
 
 def get_gunicorn_processes():
     """Get all Gunicorn worker processes"""
@@ -81,6 +95,7 @@ def check_memory_usage():
 # Only referenced by setup_performance_cron.sh. If you do not use the cron job, this can be removed. Otherwise, keep for monitoring.
 
 def main():
+    pidfile = singleton_check()
     logger.info("Starting memory monitor for Jamso-AI Engine")
     
     try:
@@ -91,6 +106,8 @@ def main():
     except KeyboardInterrupt:
         logger.info("Memory monitor stopped by user")
         sys.exit(0)
+    finally:
+        pidfile.close()
 
 if __name__ == "__main__":
     main()
