@@ -9,7 +9,9 @@ The Git backup system provides automated and reliable backups of your codebase t
 1. `git_backup.sh` - Main backup script that commits and pushes changes
 2. `git_backup_recovery.sh` - Tool to recover from problematic Git states
 3. `setup_git_credentials.sh` - Script to configure Git credentials
-4. `setup_git_backup_cron.sh` - Script to set up automated backups
+4. `install_git_backup_cron.sh` - Script to set up automated backups (recommended)
+5. `check_git_backup_status.sh` - Script to check backup status
+6. `setup_git_backup_cron.sh` - Alternative script to set up automated backups
 
 ## Setup Instructions
 
@@ -30,10 +32,16 @@ Follow the prompts to authenticate with your GitHub account. This script will:
 To configure daily automated backups:
 
 ```bash
-Tools/setup_git_backup_cron.sh
+Tools/install_git_backup_cron.sh
 ```
 
 This will create a cron job that runs the backup script daily at 2:00 AM.
+
+Alternatively, you can use the other setup script:
+
+```bash
+Tools/setup_git_backup_cron.sh
+```
 
 ## Manual Operations
 
@@ -76,6 +84,18 @@ The Git backup system creates logs in the following locations:
 - `Logs/git_recovery.log` - Log for recovery operations
 
 You can check the status of Git backups with:
+
+```bash
+Tools/check_git_backup_status.sh
+```
+
+This will display detailed backup status including:
+- Last backup attempt time
+- Current Git repository status
+- Scheduled backup information
+- Any detected issues
+
+You can also use the system cleanup script which includes backup status:
 
 ```bash
 Tools/system_cleanup.sh
