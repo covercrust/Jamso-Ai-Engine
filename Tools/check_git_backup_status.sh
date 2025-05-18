@@ -10,9 +10,23 @@ echo "===== Git Backup Status Report ====="
 echo "Generated on: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "-------------------------------------"
 
-# Check if backup log exists
-if [ -f "$BASE_DIR/Logs/git_backup.log" ]; then
-    # Get the last backup timestamp
+# Check if either backup log exists
+if [ -f "$BASE_DIR/Logs/git_backup_simple.log" ]; then
+    # Get the last backup timestamp from the simple log
+    LAST_BACKUP=$(grep -a "Git Backup Started" "$BASE_DIR/Logs/git_backup_simple.log" | tail -1 | sed 's/.*Git Backup Started - \(.*\) =.*/\1/')
+    
+    if [ -n "$LAST_BACKUP" ]; then
+        echo "Last backup attempt: $LAST_BACKUP (simple backup)"
+    else
+        echo "No backup attempts found in simple log file."
+    fi
+    
+    # Check for most recent status
+    echo ""
+    echo "Most recent backup status:"
+    grep -a -A 20 "===== Git Backup Started - " "$BASE_DIR/Logs/git_backup_simple.log" | tail -25
+elif [ -f "$BASE_DIR/Logs/git_backup.log" ]; then
+    # Get the last backup timestamp from the original log
     LAST_BACKUP=$(grep -a "Git Backup Started" "$BASE_DIR/Logs/git_backup.log" | tail -1 | sed 's/.*Git Backup Started - \(.*\) =.*/\1/')
     
     if [ -n "$LAST_BACKUP" ]; then
@@ -26,7 +40,7 @@ if [ -f "$BASE_DIR/Logs/git_backup.log" ]; then
     echo "Most recent backup status:"
     grep -a -A 20 "===== Git Backup Started - " "$BASE_DIR/Logs/git_backup.log" | tail -25
 else
-    echo "No backup log found at $BASE_DIR/Logs/git_backup.log"
+    echo "No backup logs found"
     echo "Git backup system may not be properly set up."
 fi
 
@@ -74,9 +88,9 @@ fi
 # Check cron job status
 echo ""
 echo "Backup schedule:"
-if crontab -l | grep -q "git_backup.sh"; then
+if crontab -l | grep -q "git_backup"; then
     echo "Automatic backups are scheduled. Details:"
-    crontab -l | grep "git_backup.sh"
+    crontab -l | grep "git_backup"
 else
     echo "No automatic backups scheduled."
     echo "To set up automatic backups, run: Tools/install_git_backup_cron.sh"

@@ -6,12 +6,13 @@ This document describes the Git backup system for the Jamso AI Engine.
 
 The Git backup system provides automated and reliable backups of your codebase to a remote Git repository. The system consists of several scripts:
 
-1. `git_backup.sh` - Main backup script that commits and pushes changes
-2. `git_backup_recovery.sh` - Tool to recover from problematic Git states
-3. `setup_git_credentials.sh` - Script to configure Git credentials
-4. `install_git_backup_cron.sh` - Script to set up automated backups (recommended)
-5. `check_git_backup_status.sh` - Script to check backup status
-6. `setup_git_backup_cron.sh` - Alternative script to set up automated backups
+1. `git_backup_simple.sh` - Simplified and robust backup script (recommended)
+2. `git_backup.sh` - Main backup script with advanced features
+3. `git_backup_recovery.sh` - Tool to recover from problematic Git states
+4. `setup_git_credentials.sh` - Script to configure Git credentials
+5. `install_git_backup_cron.sh` - Script to set up automated backups (recommended)
+6. `check_git_backup_status.sh` - Script to check backup status
+7. `setup_git_backup_cron.sh` - Alternative script to set up automated backups
 
 ## Setup Instructions
 
@@ -47,7 +48,13 @@ Tools/setup_git_backup_cron.sh
 
 ### Run a Backup Manually
 
-To run a backup manually:
+To run a backup manually, we recommend using the simplified backup script:
+
+```bash
+Tools/git_backup_simple.sh
+```
+
+Alternatively, you can use the more complex script with advanced features:
 
 ```bash
 Tools/git_backup.sh
