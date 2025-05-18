@@ -35,11 +35,16 @@ env/
 # Logs
 *.log
 logs/
+Logs/
+nohup.out
 
 # Database
 *.db-journal
 *.db-shm
 *.db-wal
+src/Database/Users/users.db
+src/Database/Credentials/credentials.db
+src/Database/Webhook/trading_signals.db
 
 # Temp files
 .DS_Store
@@ -47,6 +52,7 @@ logs/
 htmlcov/
 .pytest_cache/
 .coverage.*
+tmp/
 
 # Project specific
 src/Logs/
