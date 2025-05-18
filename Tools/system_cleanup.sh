@@ -18,38 +18,42 @@ fi
 
 # Check Git backup status
 echo "Checking Git backup status..."
-if [ -f "./Logs/git_backup_status.log" ]; then
-    echo "Git backup status:"
-    cat "./Logs/git_backup_status.log"
-elif [ -f "./Logs/git_backup.log" ]; then
-    echo "Last Git backup attempt:"
-    tail -n 5 "./Logs/git_backup.log"
+if [ -f "./Tools/check_git_backup_status.sh" ]; then
+    ./Tools/check_git_backup_status.sh
 else
-    echo "No Git backup log found."
-    echo "To set up Git backups, run: Tools/setup_git_credentials.sh"
-fi
+    if [ -f "./Logs/git_backup_status.log" ]; then
+        echo "Git backup status:"
+        cat "./Logs/git_backup_status.log"
+    elif [ -f "./Logs/git_backup.log" ]; then
+        echo "Last Git backup attempt:"
+        tail -n 5 "./Logs/git_backup.log"
+    else
+        echo "No Git backup log found."
+        echo "To set up Git backups, run: Tools/setup_git_credentials.sh"
+    fi
 
-# Check for Git backup errors
-if [ -f "./Logs/git_backup_error.log" ]; then
-    echo "WARNING: Git backup errors detected!"
-    cat "./Logs/git_backup_error.log"
-    echo "To resolve Git issues, run: Tools/git_backup_recovery.sh --interactive"
-fi
+    # Check for Git backup errors
+    if [ -f "./Logs/git_backup_error.log" ]; then
+        echo "WARNING: Git backup errors detected!"
+        cat "./Logs/git_backup_error.log"
+        echo "To resolve Git issues, run: Tools/git_backup_recovery.sh --interactive"
+    fi
 
-# Check Git repository status
-if [ -d ".git" ]; then
-    echo "Checking Git repository status..."
-    # Check for diverged branches
-    LOCAL_COMMITS=$(git rev-list --count master ^origin/master 2>/dev/null || echo "0")
-    REMOTE_COMMITS=$(git rev-list --count origin/master ^master 2>/dev/null || echo "0")
-    
-    if [ "$LOCAL_COMMITS" -gt 0 ] && [ "$REMOTE_COMMITS" -gt 0 ]; then
-        echo "ALERT: Git branches have diverged ($LOCAL_COMMITS local commits, $REMOTE_COMMITS remote commits)"
-        echo "To fix this, run: Tools/git_backup_recovery.sh --fix-diverged"
-    elif [ "$LOCAL_COMMITS" -gt 0 ]; then
-        echo "INFO: $LOCAL_COMMITS local Git commits need to be pushed"
-    elif [ "$REMOTE_COMMITS" -gt 0 ]; then
-        echo "INFO: $REMOTE_COMMITS remote Git commits need to be pulled"
+    # Check Git repository status
+    if [ -d ".git" ]; then
+        echo "Checking Git repository status..."
+        # Check for diverged branches
+        LOCAL_COMMITS=$(git rev-list --count master ^origin/master 2>/dev/null || echo "0")
+        REMOTE_COMMITS=$(git rev-list --count origin/master ^master 2>/dev/null || echo "0")
+        
+        if [ "$LOCAL_COMMITS" -gt 0 ] && [ "$REMOTE_COMMITS" -gt 0 ]; then
+            echo "ALERT: Git branches have diverged ($LOCAL_COMMITS local commits, $REMOTE_COMMITS remote commits)"
+            echo "To fix this, run: Tools/git_backup_recovery.sh --fix-diverged"
+        elif [ "$LOCAL_COMMITS" -gt 0 ]; then
+            echo "INFO: $LOCAL_COMMITS local Git commits need to be pushed"
+        elif [ "$REMOTE_COMMITS" -gt 0 ]; then
+            echo "INFO: $REMOTE_COMMITS remote Git commits need to be pulled"
+        fi
     fi
 fi
 
