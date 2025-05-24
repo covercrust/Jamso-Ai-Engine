@@ -1,22 +1,75 @@
 #!/bin/bash
 #
-# Jamso AI Server - Enhanced Setup Script
+# Jamso AI Server - Setup Script
 # 
 # This script automates the installation and setup process for Jamso AI Server.
 # It performs the following tasks:
-# - Provides a user-friendly menu interface
 # - Checks for and installs Python dependencies
 # - Creates a Python virtual environment
 # - Installs required packages
 # - Sets up necessary directories and configuration files
 # - Configures the environment for deployment
-# - Supports clean reinstallation
 #
-# Version: 2.0
-# Last updated: May 25, 2025
+# Version: 1.0
+# Last updated: May 1, 2025
 
 # Set strict error handling
 set -e
+
+# Process command line arguments
+NONINTERACTIVE=false
+SKIP_PYTHON_CHECK=false
+FORCE_RECREATE_VENV=false
+INSTALL_DEV_DEPS=false
+RECREATE_DB=false
+SKIP_DB_INIT=false
+
+# Process command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --non-interactive)
+            NONINTERACTIVE=true
+            shift
+            ;;
+        --skip-python-check)
+            SKIP_PYTHON_CHECK=true
+            shift
+            ;;
+        --force-recreate-venv)
+            FORCE_RECREATE_VENV=true
+            shift
+            ;;
+        --install-dev-deps)
+            INSTALL_DEV_DEPS=true
+            shift
+            ;;
+        --recreate-db)
+            RECREATE_DB=true
+            shift
+            ;;
+        --skip-db-init)
+            SKIP_DB_INIT=true
+            shift
+            ;;
+        --help)
+            echo "Usage: $0 [options]"
+            echo "Options:"
+            echo "  --non-interactive      Run in non-interactive mode without prompts"
+            echo "  --skip-python-check    Skip Python version check"
+            echo "  --force-recreate-venv  Force recreation of virtual environment"
+            echo "  --install-dev-deps     Install development dependencies"
+            echo "  --recreate-db          Recreate the database if it exists"
+            echo "  --skip-db-init         Skip database initialization"
+            echo "  --help                 Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 # Define color codes for output
 RED='\033[0;31m'
@@ -43,16 +96,7 @@ DATABASE_DIR="src/Database"
 TMP_DIR="tmp"
 RESTART_FILE="$TMP_DIR/restart.txt"
 
-# Process command line arguments
-NONINTERACTIVE=false
-SKIP_PYTHON_CHECK=false
-FORCE_RECREATE_VENV=false
-INSTALL_DEV_DEPS=false
-RECREATE_DB=false
-SKIP_DB_INIT=false
-
-# Create and set up log file for installation
-mkdir -p "$LOGS_DIR"
+# Log file for installation
 INSTALL_LOG="$LOGS_DIR/setup_$(date +%Y%m%d_%H%M%S).log"
 
 # Function to log messages
@@ -76,56 +120,7 @@ print_banner() {
     echo ""
 }
 
-# Process command line arguments
-process_args() {
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --non-interactive)
-                NONINTERACTIVE=true
-                shift
-                ;;
-            --skip-python-check)
-                SKIP_PYTHON_CHECK=true
-                shift
-                ;;
-            --force-recreate-venv)
-                FORCE_RECREATE_VENV=true
-                shift
-                ;;
-            --install-dev-deps)
-                INSTALL_DEV_DEPS=true
-                shift
-                ;;
-            --recreate-db)
-                RECREATE_DB=true
-                shift
-                ;;
-            --skip-db-init)
-                SKIP_DB_INIT=true
-                shift
-                ;;
-            --help)
-                echo "Usage: $0 [options]"
-                echo "Options:"
-                echo "  --non-interactive      Run in non-interactive mode without prompts"
-                echo "  --skip-python-check    Skip Python version check"
-                echo "  --force-recreate-venv  Force recreation of virtual environment"
-                echo "  --install-dev-deps     Install development dependencies"
-                echo "  --recreate-db          Recreate the database if it exists"
-                echo "  --skip-db-init         Skip database initialization"
-                echo "  --help                 Show this help message"
-                exit 0
-                ;;
-            *)
-                echo "Unknown option: $1"
-                echo "Use --help for usage information"
-                exit 1
-                ;;
-        esac
-    done
-}
-
-# Create necessary directories including the new structure
+# Create necessary directories
 create_directories() {
     log_message "Creating necessary directories..."
     
@@ -140,17 +135,6 @@ create_directories() {
     
     # Ensure config directory exists
     mkdir -p "$CONFIG_DIR"
-    
-    # Create scripts directories
-    mkdir -p "Scripts/Maintenance"
-    mkdir -p "Scripts/Deployment"
-    
-    # Create Tools directories
-    mkdir -p "Tools/Database"
-    
-    # Create Tests directories
-    mkdir -p "Tests/Unit"
-    mkdir -p "Tests/Integration"
     
     log_message "Directories created successfully."
 }
@@ -169,7 +153,7 @@ check_python_version() {
     if ! command -v python3 &> /dev/null; then
         log_message "Python 3 not found. Please install Python 3.8 or higher." "ERROR"
         exit 1
-    }
+    fi
     
     # Get installed Python version
     INSTALLED_PYTHON_VERSION=$(python3 --version | sed 's/Python //')
@@ -184,7 +168,7 @@ check_python_version() {
         log_message "Installed Python version ($INSTALLED_PYTHON_VERSION) is older than the minimum required version ($MIN_PYTHON_VERSION)." "ERROR"
         log_message "Please install Python $MIN_PYTHON_VERSION or higher." "ERROR"
         exit 1
-    }
+    fi
     
     # Check if Python version matches recommended
     if version_lt "$INSTALLED_PYTHON_VERSION" "$RECOMMENDED_PYTHON_VERSION"; then
@@ -201,14 +185,14 @@ check_python_version() {
         fi
     else
         log_message "Python $INSTALLED_PYTHON_VERSION detected. This meets the recommended version requirements."
-    }
+    fi
     
     # Determine actual Python command
     if command -v python$RECOMMENDED_PYTHON_VERSION &> /dev/null; then
         PYTHON_CMD="python$RECOMMENDED_PYTHON_VERSION"
     else
         PYTHON_CMD="python3"
-    }
+    fi
     
     log_message "Using Python command: $PYTHON_CMD"
 }
@@ -414,6 +398,7 @@ initialize_database() {
     # Initialize database if needed
     if [ -f "$DATABASE_DIR/schema.sql" ]; then
         log_message "Initializing database from schema..."
+        
         # Create Webhook database directory if it doesn't exist
         mkdir -p "$DATABASE_DIR/Webhook"
         
@@ -528,7 +513,7 @@ import logging
 from pathlib import Path
 
 # Configure logging
-LOG_DIR = Path(__file__).resolve().parent / "Logs"
+LOG_DIR = Path(__file__).resolve().parent / "src" / "Logs"
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOG_DIR / "passenger.log"
 
@@ -593,78 +578,6 @@ EOF
     chmod +x run_local.sh
     log_message "Created local development script: run_local.sh"
     
-    # Create stop script for local development
-    cat > "stop_local.sh" << 'EOF'
-#!/bin/bash
-# Stop Jamso AI Server running locally
-echo "Stopping local development server..."
-pkill -f "python -m src.Webhook.app" || echo "No running server found."
-EOF
-    chmod +x stop_local.sh
-    log_message "Created stop script: stop_local.sh"
-    
-    # Create cleanup script
-    cat > "Scripts/Maintenance/cleanup_cache.sh" << 'EOF'
-#!/bin/bash
-# Clean up Python cache files
-echo "Cleaning Python cache files..."
-find . -name "__pycache__" -type d -exec rm -rf {} +
-find . -name "*.pyc" -delete
-find . -name "*.pyo" -delete
-find . -name "*.pyd" -delete
-echo "Cache files cleaned successfully."
-EOF
-    chmod +x "Scripts/Maintenance/cleanup_cache.sh"
-    log_message "Created cache cleanup script: Scripts/Maintenance/cleanup_cache.sh"
-    
-    # Create a copy in the root directory for backward compatibility
-    cp "Scripts/Maintenance/cleanup_cache.sh" "cleanup_cache.sh"
-    chmod +x "cleanup_cache.sh"
-    
-    # Create health check script
-    cat > "Scripts/Maintenance/health_check.sh" << 'EOF'
-#!/bin/bash
-# Health check script for Jamso AI Server
-echo "Running health check..."
-
-# Check Python version
-python3 --version
-
-# Check virtual environment
-if [ -d ".venv" ]; then
-    echo "Virtual environment exists: OK"
-else
-    echo "Virtual environment missing: FAIL"
-fi
-
-# Check environment configuration
-if [ -f "src/Credentials/env.sh" ]; then
-    echo "Environment configuration exists: OK"
-else
-    echo "Environment configuration missing: FAIL"
-fi
-
-# Check database
-if [ -f "src/Database/Webhook/trading_signals.db" ]; then
-    echo "Database exists: OK"
-else
-    echo "Database missing: FAIL"
-fi
-
-# Check if required directories exist
-for dir in "Logs" "tmp" "src/Database" "src/Credentials" "Scripts"; do
-    if [ -d "$dir" ]; then
-        echo "Directory $dir exists: OK"
-    else
-        echo "Directory $dir missing: FAIL"
-    fi
-done
-
-echo "Health check completed."
-EOF
-    chmod +x "Scripts/Maintenance/health_check.sh"
-    log_message "Created health check script: Scripts/Maintenance/health_check.sh"
-    
     # Create a Makefile for common tasks
     cat > "Makefile" << 'EOF'
 .PHONY: run test lint clean restart install_deps help
@@ -727,306 +640,8 @@ install_deps:
 	pip install -r requirements.txt
 EOF
     log_message "Created Makefile for common tasks."
-}
-
-# Rebuild environment completely (clean install)
-clean_reinstall() {
-    log_message "Starting clean reinstallation..." "WARNING"
     
-    # Confirm with the user
-    if [ "$NONINTERACTIVE" = false ]; then
-        read -p "This will delete all existing configuration, virtual environment, and database. Continue? [y/N] " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_message "Clean reinstallation aborted by user." "WARNING"
-            return
-        fi
-    fi
-    
-    # Remove existing virtual environment
-    if [ -d "$VENV_DIR" ]; then
-        log_message "Removing existing virtual environment..."
-        rm -rf "$VENV_DIR"
-    fi
-    
-    # Remove existing database
-    if [ -f "$DATABASE_DIR/Webhook/trading_signals.db" ]; then
-        log_message "Removing existing database..."
-        rm "$DATABASE_DIR/Webhook/trading_signals.db"
-    fi
-    
-    # Remove environment configuration
-    if [ -f "$ENV_FILE" ]; then
-        log_message "Removing existing environment configuration..."
-        rm "$ENV_FILE"
-    fi
-    
-    # Clean Python cache
-    log_message "Cleaning Python cache files..."
-    find . -name "__pycache__" -type d -exec rm -rf {} +
-    find . -name "*.pyc" -delete
-    find . -name "*.pyo" -delete
-    find . -name "*.pyd" -delete
-    
-    # Set flags for full reinstallation
-    FORCE_RECREATE_VENV=true
-    RECREATE_DB=true
-    
-    # Run installation process
-    create_directories
-    check_python_version
-    setup_virtual_environment
-    install_dependencies
-    configure_environment
-    initialize_database
-    finalize_setup
-    
-    log_message "Clean reinstallation completed successfully."
-}
-
-# Setup menu
-show_setup_menu() {
-    # Clear the screen
-    clear
-    
-    # Display the banner
-    print_banner
-    
-    # Menu options
-    echo -e "${BOLD}Setup Options:${NC}"
-    echo "1) Standard Installation"
-    echo "2) Clean Reinstallation (removes existing setup)"
-    echo "3) Advanced Installation Options"
-    echo "4) Check System Requirements"
-    echo "5) Run Health Check"
-    echo "q) Quit"
-    echo ""
-    
-    # Get user choice
-    read -p "Enter your choice: " choice
-    
-    case $choice in
-        1)
-            log_message "Starting standard installation..."
-            process_args "$@"
-            create_directories
-            check_python_version
-            setup_virtual_environment
-            install_dependencies
-            configure_environment
-            initialize_database
-            finalize_setup
-            print_completion_message
-            ;;
-        2)
-            log_message "Starting clean reinstallation..."
-            clean_reinstall
-            print_completion_message
-            ;;
-        3)
-            show_advanced_menu
-            ;;
-        4)
-            check_system_requirements
-            read -p "Press Enter to continue..."
-            show_setup_menu
-            ;;
-        5)
-            run_health_check
-            read -p "Press Enter to continue..."
-            show_setup_menu
-            ;;
-        q|Q)
-            log_message "Setup exited by user."
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Invalid choice. Please try again.${NC}"
-            sleep 2
-            show_setup_menu
-            ;;
-    esac
-}
-
-# Advanced options menu
-show_advanced_menu() {
-    # Clear the screen
-    clear
-    
-    # Display the banner
-    print_banner
-    
-    # Menu options
-    echo -e "${BOLD}Advanced Installation Options:${NC}"
-    echo "1) Install with Development Dependencies"
-    echo "2) Skip Python Version Check"
-    echo "3) Skip Database Initialization"
-    echo "4) Force Recreate Virtual Environment"
-    echo "5) Recreate Database Only"
-    echo "6) Non-Interactive Installation (use defaults)"
-    echo "b) Back to Main Menu"
-    echo "q) Quit"
-    echo ""
-    
-    # Get user choice
-    read -p "Enter your choice: " choice
-    
-    case $choice in
-        1)
-            log_message "Starting installation with development dependencies..."
-            INSTALL_DEV_DEPS=true
-            create_directories
-            check_python_version
-            setup_virtual_environment
-            install_dependencies
-            configure_environment
-            initialize_database
-            finalize_setup
-            print_completion_message
-            ;;
-        2)
-            log_message "Starting installation with Python version check skipped..."
-            SKIP_PYTHON_CHECK=true
-            create_directories
-            check_python_version
-            setup_virtual_environment
-            install_dependencies
-            configure_environment
-            initialize_database
-            finalize_setup
-            print_completion_message
-            ;;
-        3)
-            log_message "Starting installation with database initialization skipped..."
-            SKIP_DB_INIT=true
-            create_directories
-            check_python_version
-            setup_virtual_environment
-            install_dependencies
-            configure_environment
-            initialize_database
-            finalize_setup
-            print_completion_message
-            ;;
-        4)
-            log_message "Starting installation with forced virtual environment recreation..."
-            FORCE_RECREATE_VENV=true
-            create_directories
-            check_python_version
-            setup_virtual_environment
-            install_dependencies
-            configure_environment
-            initialize_database
-            finalize_setup
-            print_completion_message
-            ;;
-        5)
-            log_message "Starting database recreation only..."
-            RECREATE_DB=true
-            initialize_database
-            log_message "Database recreation completed."
-            read -p "Press Enter to continue..."
-            show_advanced_menu
-            ;;
-        6)
-            log_message "Starting non-interactive installation with default values..."
-            NONINTERACTIVE=true
-            create_directories
-            check_python_version
-            setup_virtual_environment
-            install_dependencies
-            configure_environment
-            initialize_database
-            finalize_setup
-            print_completion_message
-            ;;
-        b|B)
-            show_setup_menu
-            ;;
-        q|Q)
-            log_message "Setup exited by user."
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Invalid choice. Please try again.${NC}"
-            sleep 2
-            show_advanced_menu
-            ;;
-    esac
-}
-
-# Check system requirements
-check_system_requirements() {
-    echo -e "${BOLD}System Requirements Check:${NC}"
-    echo "--------------------------"
-    
-    # Check Python
-    echo -n "Python 3.8+: "
-    if command -v python3 &> /dev/null; then
-        python_version=$(python3 --version | sed 's/Python //')
-        if [ "$(printf '%s\n' "3.8" "$python_version" | sort -V | head -n1)" = "3.8" ]; then
-            echo -e "${GREEN}PASS${NC} ($python_version)"
-        else
-            echo -e "${RED}FAIL${NC} ($python_version - need 3.8+)"
-        fi
-    else
-        echo -e "${RED}FAIL${NC} (not found)"
-    fi
-    
-    # Check pip
-    echo -n "pip: "
-    if command -v pip3 &> /dev/null; then
-        echo -e "${GREEN}PASS${NC} ($(pip3 --version))"
-    else
-        echo -e "${RED}FAIL${NC} (not found)"
-    fi
-    
-    # Check venv
-    echo -n "venv module: "
-    if python3 -c "import venv" &> /dev/null; then
-        echo -e "${GREEN}PASS${NC}"
-    else
-        echo -e "${RED}FAIL${NC} (not found - install python3-venv package)"
-    fi
-    
-    # Check SQLite
-    echo -n "SQLite: "
-    if command -v sqlite3 &> /dev/null; then
-        echo -e "${GREEN}PASS${NC} ($(sqlite3 --version))"
-    else
-        echo -e "${YELLOW}WARNING${NC} (not found - will use Python SQLite instead)"
-    fi
-    
-    # Check disk space
-    echo -n "Disk space: "
-    disk_space=$(df -h . | awk 'NR==2 {print $4}')
-    echo -e "${GREEN}$disk_space available${NC}"
-    
-    # Check memory
-    echo -n "Memory: "
-    if command -v free &> /dev/null; then
-        memory=$(free -h | awk 'NR==2 {print $4}')
-        echo -e "${GREEN}$memory available${NC}"
-    else
-        echo -e "${YELLOW}Unable to determine${NC}"
-    fi
-    
-    echo "--------------------------"
-    echo "System check complete."
-    echo ""
-}
-
-# Run health check
-run_health_check() {
-    if [ -f "Scripts/Maintenance/health_check.sh" ]; then
-        bash Scripts/Maintenance/health_check.sh
-    else
-        echo "Health check script not found. Please complete installation first."
-    fi
-}
-
-# Print completion message
-print_completion_message() {
+    # Print instructions
     echo -e "${GREEN}${BOLD}"
     echo "================================================================"
     echo "           JAMSO AI SERVER SETUP COMPLETED SUCCESSFULLY!"
@@ -1055,36 +670,42 @@ print_completion_message() {
     echo "  OR"
     echo "  $ make restart"
     echo ""
-    echo "For main application menu:"
-    echo "  $ ./start.sh"
+    echo "For more commands:"
+    echo "  $ make help"
     echo ""
     echo -e "${YELLOW}Setup log saved to: $INSTALL_LOG${NC}"
     echo ""
-    read -p "Press Enter to continue..."
 }
 
 # Main function to run the setup
 main() {
     trap 'log_message "Setup interrupted." "ERROR"; exit 1' INT TERM
     
-    # If running in non-interactive mode, bypass menu
-    if [[ "$*" == *"--non-interactive"* ]]; then
-        log_message "Running in non-interactive mode, bypassing menu..."
-        process_args "$@"
-        create_directories
-        check_python_version
-        setup_virtual_environment
-        install_dependencies
-        configure_environment
-        initialize_database
-        finalize_setup
-        return 0
-    fi
+    print_banner
     
-    # Otherwise show the menu
-    show_setup_menu "$@"
+    # Ensure we're in the right directory
+    cd "$SCRIPT_DIR"
+    
+    # Record the start time
+    local start_time=$(date +%s)
+    
+    create_directories
+    check_python_version
+    setup_virtual_environment
+    install_dependencies
+    configure_environment
+    initialize_database
+    finalize_setup
+    
+    # Calculate elapsed time
+    local end_time=$(date +%s)
+    local elapsed=$((end_time - start_time))
+    local minutes=$((elapsed / 60))
+    local seconds=$((elapsed % 60))
+    
+    log_message "Setup completed successfully in ${minutes}m ${seconds}s."
     return 0
 }
 
 # Execute main function
-main "$@"
+main

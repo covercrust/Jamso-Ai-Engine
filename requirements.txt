@@ -160,3 +160,11 @@ bokeh==3.4.0  # Interactive visualization
 ipywidgets==8.1.2  # Interactive widgets
 mplfinance==0.12.10b0  # Financial plotting tools
 pyodbc==5.2.0 # ODBC driver for database connections
+
+# Market Intelligence and News Analysis
+nltk==3.8.1  # Natural Language Toolkit for text analysis
+textblob==0.17.1  # Simple NLP library for sentiment analysis
+newspaper3k==0.2.8  # News article scraping and curation
+feedparser==6.0.11  # RSS feed parsing
+beautifulsoup4==4.12.3  # Web scraping library
+transformers==4.39.1  # Hugging Face Transformers library for advanced NLP (optional)

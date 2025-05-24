@@ -1,0 +1,53 @@
+{
+  "test_run_id": "mi_test_20250524_110657",
+  "timestamp": "2025-05-24T11:06:57.677840",
+  "platform": "linux",
+  "python_version": "3.12.3 (main, Feb  4 2025, 14:48:35) [GCC 13.3.0]",
+  "tests": [
+    {
+      "name": "test_news_fetcher_initialization",
+      "description": "Test initialization of NewsFetcher class",
+      "status": "PASS",
+      "start_time": "2025-05-24T11:06:57.678646",
+      "duration": 0.0,
+      "message": "NewsFetcher initialized successfully",
+      "end_time": "2025-05-24T11:06:57.678707"
+    },
+    {
+      "name": "test_sentiment_analyzer_initialization",
+      "description": "Test initialization of SentimentAnalyzer class",
+      "status": "PASS",
+      "start_time": "2025-05-24T11:06:57.678745",
+      "duration": 0.0,
+      "message": "SentimentAnalyzer initialized successfully",
+      "end_time": "2025-05-24T11:06:57.678881"
+    },
+    {
+      "name": "test_report_generator_initialization",
+      "description": "Test initialization of ReportGenerator class",
+      "status": "PASS",
+      "start_time": "2025-05-24T11:06:57.678911",
+      "duration": 0.0,
+      "message": "ReportGenerator initialized successfully",
+      "end_time": "2025-05-24T11:06:57.679076"
+    },
+    {
+      "name": "test_fetch_market_news",
+      "description": "Test fetching market news from API",
+      "status": "PASS",
+      "start_time": "2025-05-24T11:06:57.679105",
+      "duration": 0.58,
+      "news_count": 0,
+      "has_results": false,
+      "sample": null,
+      "end_time": "2025-05-24T11:06:58.260515"
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "errors": 0,
+    "success_rate": 100.0
+  }
+}

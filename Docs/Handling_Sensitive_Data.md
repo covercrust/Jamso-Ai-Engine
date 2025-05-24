@@ -9,6 +9,27 @@ This document provides guidelines for managing sensitive data like API keys, cre
 3. **Implement credential rotation**: Change API keys and tokens periodically.
 4. **Principle of least privilege**: Use the most restricted tokens and permissions possible.
 
+## GitHub Secret Scanning
+
+GitHub employs automated secret scanning to protect against accidental credential exposure:
+
+1. **Push Protection**: GitHub will block pushes containing what appear to be API keys or credentials
+2. **Error Message**: You'll see a "GH013: Repository rule violations" error with details about the detected secret
+3. **Resolution**: You must remove the secret from your commit history before pushing again
+
+If you encounter a blocked push due to secret scanning:
+
+```bash
+# 1. Remove the secret from the affected file
+# 2. Amend your commit to remove the secret
+git add path/to/affected/file
+git commit --amend --no-edit
+# 3. Try pushing again
+git push origin branch-name
+```
+
+For more details, see [GitHub's documentation on resolving blocked pushes](https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push).
+
 ## Environment Variables
 
 We use environment variables to store sensitive information:

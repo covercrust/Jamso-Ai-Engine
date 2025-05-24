@@ -30,6 +30,19 @@ var/
 venv/
 env/
 
+# Sensitive information
+src/Credentials/env.sh
+*.env
+*.key
+*.pem
+*.p12
+*.pfx
+*.password
+*.secret
+.env*
+!.env.example
+!src/Credentials/env.sh.example
+
 # IDE files
 .idea/
 .vscode/
@@ -69,7 +82,7 @@ src/Credentials/active_account.json
 src/Credentials/env.sh
 src/Credentials/env.sh.BAK
 **/env.sh*
-!**/env.sh.template
+!**/env.sh.example
 **/*.key
 **/*.pem
 **/*.env
