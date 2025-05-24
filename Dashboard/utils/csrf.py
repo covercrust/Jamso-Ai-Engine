@@ -8,6 +8,8 @@ Enhancements:
 """
 
 from flask import Blueprint, request, session, abort, current_app
+# NOTE: If your IDE shows an error on the following import but the code runs,
+# see /home/jamso-ai-server/Jamso-Ai-Engine/Docs/IDE_Import_Resolution.md
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 import logging
 

@@ -14,7 +14,7 @@ import requests
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
-from Webhook.utils import (
+from src.Webhook.utils import (
     create_error_response,
     handle_request_error,
     jsonify_error

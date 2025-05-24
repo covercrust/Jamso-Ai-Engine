@@ -16,7 +16,10 @@
 		},
 		"python.testing.unittestEnabled": true,
 		"python.testing.pytestEnabled": true,
-		"python.testing.nosetestsEnabled": false
+		"python.testing.nosetestsEnabled": false,
+		"terminal.integrated.env.linux": {
+			"PYTHONPATH": "${workspaceFolder}"
+		}
 	},
 	"extensions": {
 		"recommendations": [
@@ -25,6 +28,71 @@
 			"ms-toolsai.jupyter",
 			"ms-azuretools.vscode-docker",
 			"ms-vscode.makefile-tools"
+		]
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Run All API Integration Tests",
+				"type": "shell",
+				"command": "python3",
+				"args": ["${workspaceFolder}/Tools/test_integration.py", "--all"],
+				"group": "test",
+				"presentation": {
+					"reveal": "always",
+					"panel": "dedicated"
+				},
+				"problemMatcher": []
+			},
+			{
+				"label": "Run Capital.com API Test",
+				"type": "shell",
+				"command": "python3",
+				"args": ["${workspaceFolder}/Tools/test_integration.py", "--capital"],
+				"group": "test",
+				"presentation": {
+					"reveal": "always",
+					"panel": "dedicated"
+				},
+				"problemMatcher": []
+			},
+			{
+				"label": "Run Telegram API Test",
+				"type": "shell",
+				"command": "python3",
+				"args": ["${workspaceFolder}/Tools/test_integration.py", "--telegram"],
+				"group": "test",
+				"presentation": {
+					"reveal": "always",
+					"panel": "dedicated"
+				},
+				"problemMatcher": []
+			},
+			{
+				"label": "Run OpenAI API Test",
+				"type": "shell",
+				"command": "python3",
+				"args": ["${workspaceFolder}/Tools/test_integration.py", "--openai"],
+				"group": "test",
+				"presentation": {
+					"reveal": "always",
+					"panel": "dedicated"
+				},
+				"problemMatcher": []
+			},
+			{
+				"label": "Run Credential System Tests",
+				"type": "shell",
+				"command": "bash",
+				"args": ["${workspaceFolder}/Tools/run_credential_tests.sh"],
+				"group": "test",
+				"presentation": {
+					"reveal": "always",
+					"panel": "dedicated"
+				},
+				"problemMatcher": []
+			}
 		]
 	}
 }

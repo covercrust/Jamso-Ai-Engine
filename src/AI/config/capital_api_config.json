@@ -1,0 +1,38 @@
+{
+    "api_settings": {
+        "request_timeout": 30,
+        "retry_attempts": 3,
+        "retry_delay": 5,
+        "max_candles_per_request": 1000
+    },
+    "default_optimization": {
+        "days": 30,
+        "max_evals": 20,
+        "use_sentiment": true,
+        "sentiment_weight": 0.2,
+        "train_ratio": 0.7,
+        "mc_simulations": 100
+    },
+    "scheduler": {
+        "interval_hours": 24,
+        "default_symbols": ["BTCUSD", "EURUSD", "US500", "GOLD"],
+        "default_timeframes": ["HOUR", "DAY"],
+        "default_objectives": ["sharpe", "risk_adjusted"]
+    },
+    "markets": {
+        "crypto": ["BTCUSD", "ETHUSD", "XRPUSD", "LTCUSD", "BCHUSD"],
+        "forex": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD"],
+        "indices": ["US500", "US30", "UK100", "DE40", "JP225"],
+        "commodities": ["GOLD", "SILVER", "OIL", "NATGAS", "COPPER"]
+    },
+    "alerts": {
+        "enabled": true,
+        "degradation_threshold": {
+            "return": 0.2,
+            "sharpe": 0.2,
+            "drawdown_increase": 0.3,
+            "win_rate": 0.15
+        },
+        "email_notifications": false
+    }
+}

@@ -30,15 +30,7 @@ format:
 
 # Clean generated files
 clean:
-	find . -name __pycache__ -type d -exec rm -rf {} +
-	find . -name "*.pyc" -delete
-	find . -name "*.pyo" -delete
-	find . -name "*.pyd" -delete
-	find . -name ".coverage" -delete
-	find . -name ".coverage.*" -delete
-	find . -name "htmlcov" -type d -exec rm -rf {} +
-	find . -name ".pytest_cache" -type d -exec rm -rf {} +
-	find . -name ".hypothesis" -type d -exec rm -rf {} +
+	./Scripts/Maintenance/cleanup_cache.sh
 
 # Rotate and clean up log files
 clean-logs:

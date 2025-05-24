@@ -1,0 +1,21 @@
+{
+  "best_params": {
+    "atr_len": 21,
+    "fact": 3.5,
+    "risk_percent": 0.5,
+    "sl_percent": 0.3,
+    "tp_percent": 1.5,
+    "initial_capital": 10000,
+    "direction_bias": "Both"
+  },
+  "metrics": {
+    "total_return": 0.1886857536682116,
+    "annualized_return": 0.5458558204696002,
+    "max_drawdown": 0.0,
+    "sharpe_ratio": 4.356631399848993,
+    "num_trades": 14,
+    "win_rate": 0.5
+  },
+  "timestamp": "2025-05-19T12:05:17.141011",
+  "objective": "win_rate"
+}

@@ -90,3 +90,27 @@ def create():
             error = 'Password is required.'
         elif not email:
             error = 'Email is required.'
+            
+        if error is None:
+            try:
+                # Create new user
+                hashed_password = User.hash_password(password)
+                user = User(
+                    username=username,
+                    email=email,
+                    role=role,
+                    password_hash=hashed_password
+                )
+                user.save()
+                
+                flash(f'User {username} was created successfully!', 'success')
+                return redirect(url_for('admin_users.index'))
+            except Exception as e:
+                logger.error(f"Error creating user: {str(e)}")
+                error = f"Could not create user: {str(e)}"
+        
+        # If there was an error, flash it
+        flash(error, 'danger')
+        
+    # Render the create user form (both for GET and for POST with errors)
+    return render_admin_template('admin/users/create.html', page_title='Create User')

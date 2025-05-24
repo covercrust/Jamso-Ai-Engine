@@ -78,10 +78,19 @@ def select_account():
 
     try:
         # Fetch account details from the form
+        # Get balance value and handle possible None
+        balance_str = request.form.get('balance')
+        balance = 0.0  # Default value
+        if balance_str is not None:
+            try:
+                balance = float(balance_str)
+            except ValueError:
+                app.logger.warning(f"Invalid balance value: {balance_str}")
+                
         account = {
             'accountId': account_id,
             'accountName': request.form.get('account_name'),
-            'balance': {'balance': float(request.form.get('balance'))},
+            'balance': {'balance': balance},
             'currency': request.form.get('currency')
         }
         save_account_to_db(account, server)

@@ -50,6 +50,6 @@ def api_auth_required(f):
             return f(*args, **kwargs)
         except Exception as e:
             logger.error(f"Error in api_auth_required: {e}")
-            return jsonify_error("Internal server error.", 500)
+            return jsonify_error(create_error_response("Internal server error.", 500))
 
     return decorated

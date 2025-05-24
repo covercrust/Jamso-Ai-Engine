@@ -12,7 +12,8 @@ import logging
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
-from Webhook.validators import (
+# Patch: Use absolute imports for validators
+from src.Webhook.validators import (
     validate_webhook_data,
     validate_close_position_data,
     sanitize_input,

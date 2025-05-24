@@ -16,6 +16,7 @@ import signal
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify, current_app
 from functools import wraps
 from ..models.user import User
+from src.AI import PerformanceMonitor
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -286,7 +287,7 @@ def get_credentials():
 @admin_required
 def create_credential():
     """Create a new credential"""
-    data = request.json
+    data = request.json or {}
     service_name = data.get('service_name')
     api_key = data.get('api_key')
     encrypted_secret = data.get('encrypted_secret')
@@ -329,7 +330,7 @@ def delete_credential(credential_id):
 def update_profile():
     """API endpoint to update user profile settings"""
     try:
-        data = request.json
+        data = request.json or {}
         user = g.user
         
         # Update email if provided
@@ -918,7 +919,7 @@ def api_list_instruments():
 
 @dashboard_bp.route('/api/instruments', methods=['POST'])
 def api_add_instrument():
-    data = request.json
+    data = request.json or {}
     db_path = get_instruments_db_path()
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -938,7 +939,7 @@ def api_add_instrument():
 
 @dashboard_bp.route('/api/instruments/<int:instrument_id>', methods=['PUT'])
 def api_update_instrument(instrument_id):
-    data = request.json
+    data = request.json or {}
     db_path = get_instruments_db_path()
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -982,3 +983,30 @@ def overview():
         logger.error(f"Error rendering overview page: {e}")
         flash("An error occurred while loading the overview page.", "error")
         return redirect(url_for('dashboard.index'))
+
+# Example: Advanced backtest endpoint for dashboard analytics
+@dashboard_bp.route('/api/advanced_backtest', methods=['POST'])
+@permission_required('view_analytics')
+def advanced_backtest():
+    """
+    Run an advanced backtest using PerformanceMonitor and return results for analytics.
+    Expects JSON: {"strategy": "example_strategy", "params": {...}, "data": ...}
+    """
+    import pandas as pd
+    try:
+        req = request.get_json() or {}
+        strategy_name = req.get('strategy')
+        params = req.get('params', {})
+        data = req.get('data')
+        # Use direct import instead of dynamic function import
+        from src.AI.example_strategies import jamso_ai_bot_strategy
+        
+        # Use the imported strategy directly
+        df = pd.DataFrame(data) if data else pd.DataFrame()
+        monitor = PerformanceMonitor(jamso_ai_bot_strategy, df, params)
+        result = monitor.run_backtest()
+        payload = monitor.to_dashboard_payload()
+        return jsonify({'success': True, 'result': payload})
+    except Exception as e:
+        logger.error(f"Advanced backtest error: {e}")
+        return jsonify({'success': False, 'error': str(e)})

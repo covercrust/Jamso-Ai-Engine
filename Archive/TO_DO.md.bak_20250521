@@ -1,0 +1,24 @@
+# TODO.md
+
+## Jamso AI Engine – Future Enhancements & Notes
+
+### Future Ideas / Enhancements
+- [ ] Add automatic sentiment data collection for more assets
+- [ ] Implement a GUI for parameter optimization in the dashboard
+- [ ] Add more strategy types beyond SuperTrend (MACD, RSI-based, etc.)
+
+### Known Limitations
+- [x] Fixed: Capital.com optimizer days calculation error ('int' object has no attribute 'days')
+- [x] Fixed: Parameter saving and plotting now works properly in optimizer
+- [x] Fixed: Plotting error with 'results' parameter validation
+- [ ] Limited historical data available from Capital.com API (max 1000 candles)
+- [ ] Sentiment data is sparse for many symbols
+
+### Key Logic or Design Decisions
+- [x] Improved fallback optimizer for Python 3.12 compatibility
+- [x] Enhanced error handling for missing parameters in capital_data_optimizer.py
+- [ ] Maintaining compatibility with legacy optimization functions through multiple parameter formats
+
+---
+
+*Last updated: May 21, 2025 - Fixed optimization calculation errors and parameter handling*

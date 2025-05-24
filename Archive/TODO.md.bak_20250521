@@ -1,0 +1,108 @@
+# Jamso AI Engine - TODO List and Notes
+
+*Last updated: May 21, 2025*
+
+## Future Ideas & Enhancements
+- [ ] Add automatic sentiment data collection for more assets
+- [ ] Implement a GUI for parameter optimization in the dashboard
+- [ ] Add more strategy types beyond SuperTrend (MACD, RSI-based, etc.)
+- [ ] Begin full AI-driven optimization of webhook server and trading logic
+- [ ] Integrate advanced logging and error tracking
+- [ ] Upgrade Pine Script strategy for dynamic, AI-ready signals
+- [ ] Build web-based dashboard with database integration
+- [ ] Implement secure API key management for Capital.com and TradingView
+
+## Known Limitations & Fixes
+- [x] Fixed: Capital.com optimizer days calculation error ('int' object has no attribute 'days')
+- [x] Fixed: Parameter saving and plotting now works properly in optimizer
+- [x] Fixed: Plotting error with 'results' parameter validation
+- [ ] Limited historical data available from Capital.com API (max 1000 candles)
+- [ ] Sentiment data is sparse for many symbols
+- [ ] System Python is externally managed; use venv or pipx for package management
+- [ ] Some tests require additional dependencies (pytest, pycryptodome)
+- [ ] Dashboard and webhook server require correct environment variables and credentials for full integration tests
+
+## Key Logic & Design Decisions
+- [x] Improved fallback optimizer for Python 3.12 compatibility
+- [x] Enhanced error handling for missing parameters in capital_data_optimizer.py
+- [ ] Maintaining compatibility with legacy optimization functions through multiple parameter formats
+- [ ] All major changes and design choices will be logged in COPILOT_CHANGELOG.md for Copilot memory
+
+## Environment Setup Instructions
+- Create a Python virtual environment for development:
+  ```bash
+  python3 -m venv .venv
+  source .venv/bin/activate
+  pip install -r requirements.txt
+  pip install pytest pycryptodome
+  ```
+- Use `pipx` for user-level package installs if system Python is locked down.
+- Ensure `Logs/` directory exists for all logging and test output.
+- If you encounter import errors in tests, verify that you are running pytest from the project root and using the correct PYTHONPATH.
+
+## AI Trading Implementation
+
+### Setup Instructions
+- Install AI module dependencies:
+  ```bash
+  pip install scikit-learn numpy pandas matplotlib
+  ```
+- Apply AI database schema updates:
+  ```bash
+  python3 src/Database/apply_ai_schema_updates.py
+  ```
+
+### Implementation Status
+1. **Data Collection** ✅
+   - ✅ Implemented scheduled market data collection for volatility analysis in `src/AI/data_collector.py`
+   - ✅ Configured historical data retrieval for regime detection training with `src/AI/scripts/collect_market_data.py`
+
+2. **AI Module Testing** ✅
+   - ✅ Created unit tests for regime detection accuracy in `src/AI/scripts/test_ai_modules.py`
+   - ✅ Developed performance benchmarks for position sizing
+   - ✅ Implemented risk management simulation scenarios
+
+3. **Dashboard Integration** ✅
+   - ✅ Added volatility regime visualization framework in `src/AI/dashboard_integration.py`
+   - ✅ Implemented position sizing analytics view
+   - ✅ Created risk management dashboard section
+
+4. **Performance Optimization** ✅
+   - ✅ Implemented caching for frequent regime detection calls in `src/AI/utils/cache.py`
+   - ✅ Optimized database queries for faster position sizing
+   - ✅ Added support for batch processing for market correlation updates
+
+5. **Documentation** ✅
+   - ✅ Created comprehensive API documentation in `Docs/AI/API_Documentation.md`
+   - ✅ Created developer guide for AI module extension in `Docs/AI/Developer_Guide.md`
+   - ✅ Documented configuration options for risk parameters in `Docs/AI/Risk_Parameters_Guide.md`
+   - ✅ Added documentation index and quick start guide in `Docs/AI/README.md`
+
+### AI Future Enhancements
+1. **Advanced AI Models**
+   - [ ] Research and implement deep learning models for market prediction
+   - [ ] Develop reinforcement learning for adaptive strategy optimization
+   - [ ] Explore NLP for news sentiment analysis integration
+
+2. **Real-time Analytics**
+   - [ ] Create real-time dashboards for volatility regime transitions
+   - [ ] Implement alerts for significant correlation changes
+   - [ ] Develop live position risk monitoring
+   
+3. **Mobile Alert Enhancements**
+   - ✅ Implemented basic mobile alerts system in `src/AI/mobile_alerts.py`
+   - ✅ Integrated with scheduled optimization for performance monitoring
+   - ✅ Added support for multiple notification channels (email, SMS, push, webhook)
+   - [ ] Develop custom notification templates
+   - [ ] Create web UI for alert preference management
+   - [ ] Implement alert history visualization
+
+4. **Performance Monitoring**
+   - [ ] Develop automated backtesting for AI module performance
+   - [ ] Create benchmarking tools for strategy comparison
+   - [ ] Implement automated parameter optimization
+
+## Maintenance Log
+- [2025-05-21] Removed unused `merge_upgrade_optimize.py` script and associated `MERGE_LOG.md` as they were no longer needed.
+- [2025-05-21] Merged duplicate TODO files (TODO.md and TO DO.md) into a single comprehensive file.
+- [2025-05-21] Fixed optimization calculation errors and parameter handling.

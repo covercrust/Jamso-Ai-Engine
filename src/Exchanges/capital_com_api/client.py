@@ -6,6 +6,13 @@ import json
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+# Import dotenv for loading environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load environment variables from .env file if it exists
+except ImportError:
+    print("Warning: python-dotenv not installed. Environment variables may not be loaded properly.")
+
 from src.Exchanges.capital_com_api.session_manager import SessionManager
 from src.Exchanges.capital_com_api.request_handler import RequestHandler
 from src.Exchanges.capital_com_api.account_manager import AccountManager
@@ -42,12 +49,48 @@ logger = logging.getLogger(__name__)
 # Initialize CredentialManager
 credential_manager = CredentialManager()
 
-# Fetch credentials dynamically
-credentials = {
-    'CAPITAL_API_KEY': credential_manager.get_credential('capital_com', 'CAPITAL_API_KEY'),
-    'CAPITAL_API_LOGIN': credential_manager.get_credential('capital_com', 'CAPITAL_API_LOGIN'),
-    'CAPITAL_API_PASSWORD': credential_manager.get_credential('capital_com', 'CAPITAL_API_PASSWORD')
-}
+# Fetch credentials dynamically - try secure database first, then environment variables
+def get_credentials():
+    """
+    Get Capital.com API credentials from secure database first,
+    then fall back to environment variables if not found
+    """
+    # Try secure database first
+    db_credentials = {
+        'CAPITAL_API_KEY': credential_manager.get_credential('capital_com', 'CAPITAL_API_KEY'),
+        'CAPITAL_API_LOGIN': credential_manager.get_credential('capital_com', 'CAPITAL_API_LOGIN'),
+        'CAPITAL_API_PASSWORD': credential_manager.get_credential('capital_com', 'CAPITAL_API_PASSWORD')
+    }
+    
+    # Check if all credentials were found in database
+    if all(db_credentials.values()):
+        logger.info("Using Capital.com API credentials from secure database")
+        return db_credentials
+        
+    # Fall back to environment variables
+    logger.warning("Some credentials missing from secure database, checking environment variables")
+    env_credentials = {
+        'CAPITAL_API_KEY': os.environ.get('CAPITAL_API_KEY', ''),
+        'CAPITAL_API_LOGIN': os.environ.get('CAPITAL_API_LOGIN', ''),
+        'CAPITAL_API_PASSWORD': os.environ.get('CAPITAL_API_PASSWORD', '')
+    }
+    
+    # Merge credentials, prioritizing database values
+    merged_credentials = {
+        'CAPITAL_API_KEY': db_credentials['CAPITAL_API_KEY'] or env_credentials['CAPITAL_API_KEY'],
+        'CAPITAL_API_LOGIN': db_credentials['CAPITAL_API_LOGIN'] or env_credentials['CAPITAL_API_LOGIN'],
+        'CAPITAL_API_PASSWORD': db_credentials['CAPITAL_API_PASSWORD'] or env_credentials['CAPITAL_API_PASSWORD']
+    }
+    
+    # Log the source of credentials
+    for key in merged_credentials:
+        source = 'database' if db_credentials[key] else ('environment' if env_credentials[key] else 'not found')
+        logger.debug(f"{key} found in: {source}")
+    
+    return merged_credentials
+
+# Get credentials from most secure source
+credentials = get_credentials()
 
 CAPITAL_API_KEY = credentials.get('CAPITAL_API_KEY', '')
 CAPITAL_API_LOGIN = credentials.get('CAPITAL_API_LOGIN', '')

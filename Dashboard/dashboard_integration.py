@@ -137,7 +137,19 @@ def setup_dashboard(app):
                         expires = self.get_expiration_time(app, session)
                         
                         # Get session ID and ensure it's a string
-                        session_id = self.get_signing_serializer(app).dumps(dict(session))
+                        serializer = self.get_signing_serializer(app)
+                        if serializer is None:
+                            # Create default serializer if None is returned
+                            from itsdangerous import URLSafeTimedSerializer
+                            secret_key = app.secret_key
+                            if secret_key is None:
+                                # Generate a default secret key if none exists
+                                import secrets
+                                secret_key = secrets.token_hex(16)
+                                app.secret_key = secret_key
+                            serializer = URLSafeTimedSerializer(secret_key)
+                        
+                        session_id = serializer.dumps(dict(session))
                         if isinstance(session_id, bytes):
                             session_id = session_id.decode('utf-8')
                             
@@ -150,8 +162,9 @@ def setup_dashboard(app):
                         raise
                         
         # Use our custom session interface
+        # Create a Flask-Session instance with our patched interface
         session = FlaskSession()
-        session.session_interface = PatchedSessionInterface()
+        app.session_interface = PatchedSessionInterface()  # Assign directly to the app
         session.init_app(app)
         
         # Initialize the database for the User model with absolute path

@@ -11,6 +11,14 @@ from urllib3.util.retry import Retry
 from base64 import b64decode, b64encode
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
+
+# Import dotenv for loading environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load environment variables from .env file if it exists
+except ImportError:
+    print("Warning: python-dotenv not installed. Environment variables may not be loaded properly.")
+
 from src.Exchanges.capital_com_api.exceptions import CapitalAPIException
 from src.Exchanges.capital_com_api.account_config import AccountConfig
 from src.Credentials.credentials_manager import CredentialManager

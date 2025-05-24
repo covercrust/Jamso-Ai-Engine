@@ -1,0 +1,1 @@
+/home/jamso-ai-server/Jamso-Ai-Engine/Scripts/Maintenance/cleanup_cache.sh

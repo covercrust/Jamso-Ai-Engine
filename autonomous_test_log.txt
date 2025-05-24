@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/home/jamso-ai-server/Jamso-Ai-Engine/.venv/bin/pytest", line 5, in <module>
+    from pytest import console_main
+ModuleNotFoundError: No module named 'pytest'

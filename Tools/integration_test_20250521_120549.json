@@ -1,0 +1,16 @@
+{
+  "capital_com": {
+    "status": "error",
+    "details": {
+      "error": "Import error: No module named 'numpy'"
+    }
+  },
+  "telegram": {
+    "status": "not_tested",
+    "details": {}
+  },
+  "openai": {
+    "status": "not_tested",
+    "details": {}
+  }
+}

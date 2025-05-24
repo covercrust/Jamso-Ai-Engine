@@ -108,6 +108,17 @@ def execute_trade(client: Client, data: Dict[str, Any]) -> Dict[str, Any]:
         if not all(key in data for key in ['ticker', 'order_action', 'position_size']):
             raise ValueError("Missing required trading fields")
 
+        # Apply AI-driven trading enhancements
+        ai_enhanced_data = apply_ai_trading_logic(data, client)
+        
+        # Check if AI risk management rejected the trade
+        if isinstance(ai_enhanced_data, dict) and ai_enhanced_data.get('status') == 'error':
+            logger.warning(f"Trade rejected by AI risk management: {ai_enhanced_data.get('message')}")
+            return ai_enhanced_data
+        
+        # Use the AI-enhanced data from now on
+        data = ai_enhanced_data
+
         # Map webhook fields to API fields
         position_args = {
             'epic': str(data['ticker']),
@@ -589,3 +600,136 @@ def jsonify_error(error_data: Tuple[Dict[str, Any], int]):
     """
     response_dict, status_code = error_data
     return jsonify(response_dict), status_code
+
+def apply_ai_trading_logic(data: Dict[str, Any], client: Client) -> Dict[str, Any]:
+    """
+    Apply AI-driven trading enhancements including:
+    - Volatility regime detection
+    - Dynamic position sizing
+    - Risk management
+    
+    Args:
+        data: Trading signal data from webhook
+        client: Authenticated Capital.com client
+        
+    Returns:
+        Modified trading signal data with AI enhancements
+    """
+    try:
+        # Get required modules
+        from src.AI.regime_detector import VolatilityRegimeDetector
+        from src.AI.position_sizer import AdaptivePositionSizer
+        from src.AI.risk_manager import RiskManager
+        
+        # Extract key signal parameters
+        symbol = data.get('ticker') or data.get('symbol')
+        direction = data.get('order_action') or data.get('direction')
+        original_size = float(data.get('position_size', data.get('quantity', 1.0)))
+        
+        # Default account_id - in production should be extracted from appropriate source
+        account_id = int(data.get('account_id', 1))
+        
+        # Extract price and stop loss if available
+        price = float(data.get('price', 0)) if data.get('price') else None
+        stop_loss = float(data.get('stop_loss', 0)) if data.get('stop_loss') else None
+        
+        # Step 1: Detect current volatility regime
+        logger.info(f"Analyzing volatility regime for {symbol}")
+        regime_detector = VolatilityRegimeDetector()
+        regime_info = regime_detector.get_current_regime(symbol)
+        
+        vol_regime = regime_info.get('regime_id', -1)
+        vol_level = regime_info.get('volatility_level', 'MEDIUM')  # Default to medium if unknown
+        
+        # Add regime information to signal data for reference
+        data['volatility_regime'] = vol_regime
+        data['volatility_level'] = vol_level
+        
+        # Log regime detection
+        logger.info(f"Detected volatility regime for {symbol}: {vol_regime} ({vol_level})")
+        
+        # Step 2: Apply dynamic position sizing
+        logger.info(f"Calculating optimal position size for {symbol}")
+        position_sizer = AdaptivePositionSizer()
+        sizing_result = position_sizer.calculate_position_size(
+            symbol=symbol,
+            account_id=account_id,
+            original_size=original_size,
+            price=price,
+            stop_loss=stop_loss
+        )
+        
+        # Update position size with AI-optimized value
+        adjusted_size = sizing_result.get('adjusted_size', original_size)
+        data['position_size'] = adjusted_size
+        data['original_position_size'] = original_size
+        data['position_size_adjustment_factor'] = sizing_result.get('total_adjustment_factor', 1.0)
+        
+        # Log position sizing adjustment
+        logger.info(f"Adjusted position size for {symbol}: {original_size} -> {adjusted_size} " +
+                    f"(adjustment factor: {sizing_result.get('total_adjustment_factor', 1.0):.2f})")
+        
+        # Step 3: Apply risk management logic
+        logger.info(f"Evaluating trade risk for {symbol}")
+        risk_manager = RiskManager()
+        risk_evaluation = risk_manager.evaluate_trade_risk(data, account_id)
+        
+        # Apply risk-based adjustments
+        if risk_evaluation.get('status') == 'REJECTED':
+            logger.warning(f"Trade rejected by risk management: {risk_evaluation.get('rejection_reason')}")
+            # Return error response to prevent trade execution
+            return {
+                'status': 'error',
+                'message': f"Trade rejected: {risk_evaluation.get('rejection_reason')}",
+                'code': 'RISK_MANAGEMENT_REJECTION',
+                'data': data,
+                'risk_evaluation': risk_evaluation
+            }
+        
+        elif risk_evaluation.get('status') == 'ADJUST_SIZE':
+            # Apply risk-based size adjustment
+            risk_adjusted_size = risk_evaluation.get('adjusted_size', adjusted_size)
+            data['position_size'] = risk_adjusted_size
+            data['risk_size_adjustment_factor'] = risk_evaluation.get('size_adjustment_factor', 1.0)
+            logger.info(f"Risk management adjusted position size: {adjusted_size} -> {risk_adjusted_size}")
+        
+        # Step 4: Adjust stop loss based on volatility if needed
+        if stop_loss and vol_level != 'UNKNOWN':
+            # Adjust stop loss to account for volatility
+            adjusted_stop = risk_manager.adjust_stop_loss(
+                symbol=symbol,
+                current_price=price,
+                original_stop=stop_loss,
+                position_direction=direction,
+                volatility_level=vol_level
+            )
+            
+            # Update stop loss in signal data
+            data['original_stop_loss'] = stop_loss
+            data['stop_loss'] = adjusted_stop
+            logger.info(f"Adjusted stop loss based on {vol_level} volatility: {stop_loss} -> {adjusted_stop}")
+        
+        # Add AI metadata to signal
+        data['ai_enhanced'] = True
+        data['ai_metadata'] = {
+            'volatility_regime': vol_regime,
+            'volatility_level': vol_level,
+            'position_sizing': {
+                'original': original_size,
+                'ai_adjusted': adjusted_size,
+                'final': data['position_size']
+            },
+            'risk_evaluation': {
+                'status': risk_evaluation.get('status'),
+                'daily_risk_used': risk_evaluation.get('daily_risk', {}).get('used_risk_percent', 0),
+                'drawdown': risk_evaluation.get('drawdown', {}).get('drawdown_percent', 0)
+            },
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        return data
+    
+    except Exception as e:
+        logger.error(f"Error in AI trading logic: {str(e)}", exc_info=True)
+        # Return original data if AI enhancement fails
+        return data

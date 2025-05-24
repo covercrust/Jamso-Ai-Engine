@@ -6,6 +6,7 @@ PROJECT_ROOT = '/home/jamso-ai-server/Jamso-Ai-Engine'
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+# Patch: Use absolute import for AccountConfig
 from src.Exchanges.capital_com_api.account_config import AccountConfig
 
 def integration_test_account_config():

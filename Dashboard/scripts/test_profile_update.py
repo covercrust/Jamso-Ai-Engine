@@ -64,6 +64,10 @@ def test_profile_update():
         
         # Verify the update
         updated_admin = User.find_by_username('admin')
+        if updated_admin is None:
+            logger.error("Failed to retrieve updated user profile")
+            return False
+            
         logger.info(f"Updated profile - First Name: '{updated_admin.first_name}', Last Name: '{updated_admin.last_name}'")
         
         logger.info("Profile update test completed successfully.")
